@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
 
 type Group = {
   id: number;
@@ -26,7 +27,7 @@ export default function GroupsScreen() {
       const data = await api.get<Group[]>('/api/v1/groups');
       setGroups(data ?? []);
     } catch {
-      setError('Could not load your groups.');
+      setError(t('groups.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -40,15 +41,15 @@ export default function GroupsScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.header}>
-          <ThemedText type="title">Your groups</ThemedText>
+          <ThemedText type="title">{t('groups.title')}</ThemedText>
           <Pressable onPress={() => router.push('/groups/new')} style={styles.newButton}>
             <ThemedText type="smallBold" style={styles.newButtonText}>
-              + New
+              {t('groups.new')}
             </ThemedText>
           </Pressable>
         </ThemedView>
 
-        {isLoading && <ThemedText type="default">Loading…</ThemedText>}
+        {isLoading && <ThemedText type="default">{t('groups.loading')}</ThemedText>}
 
         {!isLoading && error && (
           <ThemedView type="backgroundElement" style={styles.emptyState}>
@@ -58,9 +59,9 @@ export default function GroupsScreen() {
 
         {!isLoading && !error && groups.length === 0 && (
           <ThemedView type="backgroundElement" style={styles.emptyState}>
-            <ThemedText type="default">No groups yet.</ThemedText>
+            <ThemedText type="default">{t('groups.empty')}</ThemedText>
             <ThemedText type="small" style={styles.hint}>
-              Create one to start sharing expenses.
+              {t('groups.emptyHint')}
             </ThemedText>
           </ThemedView>
         )}
@@ -81,7 +82,7 @@ export default function GroupsScreen() {
         )}
 
         <Pressable onPress={signOut} style={styles.signOut}>
-          <ThemedText type="smallBold">Sign out</ThemedText>
+          <ThemedText type="smallBold">{t('groups.signOut')}</ThemedText>
         </Pressable>
       </SafeAreaView>
     </ThemedView>

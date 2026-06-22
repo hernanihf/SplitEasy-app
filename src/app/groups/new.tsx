@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
 
 type Group = {
   id: number;
@@ -23,7 +24,7 @@ export default function NewGroupScreen() {
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      setError('Give the group a name.');
+      setError(t('newGroup.nameRequired'));
       return;
     }
     setIsSubmitting(true);
@@ -32,7 +33,7 @@ export default function NewGroupScreen() {
       const group = await api.post<Group>('/api/v1/groups', { name: name.trim() });
       router.replace(`/groups/${group.id}`);
     } catch {
-      setError('Could not create the group. Please try again.');
+      setError(t('newGroup.createError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -41,12 +42,12 @@ export default function NewGroupScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">New group</ThemedText>
+        <ThemedText type="title">{t('newGroup.title')}</ThemedText>
 
         <TextInput
           value={name}
           onChangeText={setName}
-          placeholder="e.g. Trip to the coast"
+          placeholder={t('newGroup.namePlaceholder')}
           placeholderTextColor={theme.textSecondary}
           style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
           autoFocus
@@ -59,7 +60,7 @@ export default function NewGroupScreen() {
           disabled={isSubmitting}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
           <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSubmitting ? 'Creating…' : 'Create group'}
+            {isSubmitting ? t('newGroup.creating') : t('newGroup.create')}
           </ThemedText>
         </Pressable>
       </SafeAreaView>

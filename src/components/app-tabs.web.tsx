@@ -5,6 +5,7 @@ import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { t } from '@/lib/i18n';
 
 export default function AppTabs() {
   return (
@@ -13,7 +14,7 @@ export default function AppTabs() {
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="home" href="/" asChild>
-            <TabButton>Groups</TabButton>
+            <TabButton>{t('tabs.groups')}</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>

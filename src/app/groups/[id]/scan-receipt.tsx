@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
 
 type ReceiptScan = {
   merchant_name: string;
@@ -46,12 +47,12 @@ export default function ScanReceiptScreen() {
         pathname: '/groups/[id]/add-expense',
         params: {
           id: id as string,
-          description: scan.merchant_name || 'Receipt',
+          description: scan.merchant_name || t('scanReceipt.defaultMerchant'),
           amount: String(scan.total_amount || ''),
         },
       });
     } catch {
-      setError("We couldn't read the receipt. Try another photo or add the expense manually.");
+      setError(t('scanReceipt.readError'));
       setIsScanning(false);
     }
   };
@@ -59,7 +60,7 @@ export default function ScanReceiptScreen() {
   const pickFromCamera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      setError('We need camera permission to scan the receipt.');
+      setError(t('scanReceipt.cameraPermission'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
@@ -71,7 +72,7 @@ export default function ScanReceiptScreen() {
   const pickFromLibrary = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setError('We need permission to access your photos.');
+      setError(t('scanReceipt.photosPermission'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, mediaTypes: ['images'] });
@@ -83,24 +84,22 @@ export default function ScanReceiptScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Scan receipt</ThemedText>
-        <ThemedText type="default">
-          Take a photo or upload a picture of the receipt and AI will fill in the expense for you.
-        </ThemedText>
+        <ThemedText type="title">{t('scanReceipt.title')}</ThemedText>
+        <ThemedText type="default">{t('scanReceipt.description')}</ThemedText>
 
         {isScanning ? (
-          <ThemedText type="default">Reading the receipt…</ThemedText>
+          <ThemedText type="default">{t('scanReceipt.reading')}</ThemedText>
         ) : (
           <>
             <Pressable onPress={pickFromCamera} style={styles.button}>
               <ThemedText type="smallBold" style={styles.buttonText}>
-                📷 Take photo
+                {t('scanReceipt.takePhoto')}
               </ThemedText>
             </Pressable>
 
             <Pressable onPress={pickFromLibrary} style={[styles.button, styles.secondaryButton]}>
               <ThemedText type="smallBold" style={styles.buttonText}>
-                🖼️ Choose from gallery
+                {t('scanReceipt.chooseFromGallery')}
               </ThemedText>
             </Pressable>
           </>

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
 
 // On web, the OAuth redirect lands here directly (no in-app browser to close).
 // On native, expo-web-browser intercepts this URL before it ever renders, but
@@ -22,7 +23,7 @@ export default function AuthCallbackScreen() {
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <ThemedText>Signing in…</ThemedText>
+      <ThemedText>{t('auth.signingIn')}</ThemedText>
     </ThemedView>
   );
 }

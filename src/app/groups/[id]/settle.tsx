@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
+import { formatAmount, t } from '@/lib/i18n';
 
 export default function SettleScreen() {
   const { id, from, to, amount, fromName, toName } = useLocalSearchParams<{
@@ -29,11 +30,11 @@ export default function SettleScreen() {
   const handleSettle = async () => {
     const paid = parseFloat(value.replace(',', '.'));
     if (!paid || paid <= 0) {
-      setError('The amount must be greater than 0.');
+      setError(t('settle.amountPositive'));
       return;
     }
     if (paid > maxAmount + 0.01) {
-      setError(`You can't settle more than $${maxAmount.toFixed(2)}.`);
+      setError(t('settle.amountTooHigh', { max: formatAmount(maxAmount) }));
       return;
     }
 
@@ -47,7 +48,7 @@ export default function SettleScreen() {
       });
       router.back();
     } catch {
-      setError('Could not record the payment. Please try again.');
+      setError(t('settle.recordError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -56,22 +57,25 @@ export default function SettleScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Settle up</ThemedText>
+        <ThemedText type="title">{t('settle.title')}</ThemedText>
 
         <ThemedView type="backgroundElement" style={styles.summary}>
           <ThemedText type="default">
-            {fromName ?? `User #${from}`} pays {toName ?? `User #${to}`}
+            {t('settle.pays', {
+              from: fromName ?? t('groupDetail.userN', { id: from }),
+              to: toName ?? t('groupDetail.userN', { id: to }),
+            })}
           </ThemedText>
           <ThemedText type="small" style={styles.hint}>
-            Current debt: ${maxAmount.toFixed(2)}
+            {t('settle.currentDebt', { amount: formatAmount(maxAmount) })}
           </ThemedText>
         </ThemedView>
 
-        <ThemedText type="smallBold">How much is being paid?</ThemedText>
+        <ThemedText type="smallBold">{t('settle.howMuch')}</ThemedText>
         <TextInput
           value={value}
           onChangeText={setValue}
-          placeholder="Amount"
+          placeholder={t('settle.amountPlaceholder')}
           placeholderTextColor={theme.textSecondary}
           keyboardType="decimal-pad"
           style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
@@ -85,7 +89,7 @@ export default function SettleScreen() {
           disabled={isSubmitting}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
           <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSubmitting ? 'Recording…' : 'Record payment'}
+            {isSubmitting ? t('settle.recording') : t('settle.record')}
           </ThemedText>
         </Pressable>
       </SafeAreaView>

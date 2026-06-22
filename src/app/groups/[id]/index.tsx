@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
+import { formatAmount, t } from '@/lib/i18n';
 
 export type Group = {
   id: number;
@@ -38,7 +39,8 @@ export default function GroupDetailScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const memberName = useCallback(
-    (userID: number) => group?.members.find((m) => m.id === userID)?.name ?? `User #${userID}`,
+    (userID: number) =>
+      group?.members.find((m) => m.id === userID)?.name ?? t('groupDetail.userN', { id: userID }),
     [group],
   );
 
@@ -57,7 +59,7 @@ export default function GroupDetailScreen() {
         setExpenses(expensesData ?? []);
         setDebts(debtsData ?? []);
       })
-      .catch(() => setError('Could not load the group.'))
+      .catch(() => setError(t('groupDetail.loadError')))
       .finally(() => setIsLoading(false));
   }, [id, api]);
 
@@ -67,7 +69,7 @@ export default function GroupDetailScreen() {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <ThemedText type="default">Loading…</ThemedText>
+          <ThemedText type="default">{t('groupDetail.loading')}</ThemedText>
         </SafeAreaView>
       </ThemedView>
     );
@@ -77,7 +79,7 @@ export default function GroupDetailScreen() {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <ThemedText type="default">{error ?? 'Group not found.'}</ThemedText>
+          <ThemedText type="default">{error ?? t('groupDetail.notFound')}</ThemedText>
         </SafeAreaView>
       </ThemedView>
     );
@@ -93,22 +95,22 @@ export default function GroupDetailScreen() {
               onPress={() => router.push(`/groups/${id}/scan-receipt`)}
               style={[styles.newButton, styles.scanButton]}>
               <ThemedText type="smallBold" style={styles.newButtonText}>
-                📷 Receipt
+                {t('groupDetail.receipt')}
               </ThemedText>
             </Pressable>
             <Pressable
               onPress={() => router.push(`/groups/${id}/add-expense`)}
               style={styles.newButton}>
               <ThemedText type="smallBold" style={styles.newButtonText}>
-                + Expense
+                {t('groupDetail.expense')}
               </ThemedText>
             </Pressable>
           </ThemedView>
         </ThemedView>
 
-        <ThemedText type="subtitle">Balances</ThemedText>
+        <ThemedText type="subtitle">{t('groupDetail.balances')}</ThemedText>
         {debts.length === 0 ? (
-          <ThemedText type="default">All settled up.</ThemedText>
+          <ThemedText type="default">{t('groupDetail.allSettled')}</ThemedText>
         ) : (
           debts.map((debt, index) => (
             <Pressable
@@ -128,28 +130,34 @@ export default function GroupDetailScreen() {
               }>
               <ThemedView type="backgroundElement" style={styles.debtRow}>
                 <ThemedText type="default">
-                  {memberName(debt.from_user_id)} owes {memberName(debt.to_user_id)}: $
-                  {debt.amount.toFixed(2)}
+                  {t('groupDetail.owes', {
+                    from: memberName(debt.from_user_id),
+                    to: memberName(debt.to_user_id),
+                    amount: formatAmount(debt.amount),
+                  })}
                 </ThemedText>
                 <ThemedText type="smallBold" style={styles.settleHint}>
-                  Settle ›
+                  {t('groupDetail.settle')}
                 </ThemedText>
               </ThemedView>
             </Pressable>
           ))
         )}
 
-        <ThemedText type="subtitle">Expenses</ThemedText>
+        <ThemedText type="subtitle">{t('groupDetail.expenses')}</ThemedText>
         <FlatList
           data={expenses}
           keyExtractor={(expense) => String(expense.id)}
           contentContainerStyle={styles.list}
-          ListEmptyComponent={<ThemedText type="default">No expenses yet.</ThemedText>}
+          ListEmptyComponent={<ThemedText type="default">{t('groupDetail.noExpenses')}</ThemedText>}
           renderItem={({ item }) => (
             <ThemedView type="backgroundElement" style={styles.row}>
               <ThemedText type="default">{item.description}</ThemedText>
               <ThemedText type="small">
-                Paid by {item.paid_by.name} · ${item.amount.toFixed(2)}
+                {t('groupDetail.paidBy', {
+                  name: item.paid_by.name,
+                  amount: formatAmount(item.amount),
+                })}
               </ThemedText>
             </ThemedView>
           )}

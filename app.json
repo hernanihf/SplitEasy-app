@@ -53,7 +53,8 @@
           "photosPermission": "SplitEasy necesita acceso a tus fotos para escanear tickets.",
           "cameraPermission": "SplitEasy necesita la cámara para escanear tickets."
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

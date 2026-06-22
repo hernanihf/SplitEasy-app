@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { googleLoginUrl, useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -39,7 +40,7 @@ export default function LoginScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ThemedText type="title">SplitEasy</ThemedText>
         <ThemedText type="default" style={styles.subtitle}>
-          Organize shared expenses with your group.
+          {t('login.subtitle')}
         </ThemedText>
 
         <Pressable
@@ -47,13 +48,13 @@ export default function LoginScreen() {
           disabled={isSigningIn}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
           <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSigningIn ? 'Connecting…' : 'Continue with Google'}
+            {isSigningIn ? t('login.connecting') : t('login.continueWithGoogle')}
           </ThemedText>
         </Pressable>
 
         {Platform.OS === 'web' && (
           <ThemedText type="small" style={styles.hint}>
-            A Google window will open for you to sign in.
+            {t('login.webHint')}
           </ThemedText>
         )}
       </SafeAreaView>

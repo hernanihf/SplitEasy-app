@@ -8,15 +8,16 @@ import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
+import { formatAmount, t } from '@/lib/i18n';
 import type { Group } from '@/app/groups/[id]/index';
 
 type SplitMethod = 'equal' | 'percentage' | 'fixed' | 'shares';
 
-const SPLIT_METHODS: { value: SplitMethod; label: string }[] = [
-  { value: 'equal', label: 'Equally' },
-  { value: 'percentage', label: 'Percentages' },
-  { value: 'fixed', label: 'Fixed amounts' },
-  { value: 'shares', label: 'Shares' },
+const SPLIT_METHODS: { value: SplitMethod; labelKey: string }[] = [
+  { value: 'equal', labelKey: 'addExpense.methodEqual' },
+  { value: 'percentage', labelKey: 'addExpense.methodPercentage' },
+  { value: 'fixed', labelKey: 'addExpense.methodFixed' },
+  { value: 'shares', labelKey: 'addExpense.methodShares' },
 ];
 
 export default function AddExpenseScreen() {
@@ -52,11 +53,11 @@ export default function AddExpenseScreen() {
   const handleSubmit = async () => {
     if (!group || !paidByID) return;
     if (!description.trim()) {
-      setError('Add a description for the expense.');
+      setError(t('addExpense.descriptionRequired'));
       return;
     }
     if (!amountNumber || amountNumber <= 0) {
-      setError('The amount must be greater than 0.');
+      setError(t('addExpense.amountPositive'));
       return;
     }
 
@@ -66,7 +67,7 @@ export default function AddExpenseScreen() {
     if (splitMethod === 'equal') {
       splits = memberIDs.filter((memberID) => included[memberID]).map((memberID) => ({ user_id: memberID, value: 0 }));
       if (splits.length === 0) {
-        setError('Pick at least one member to split the expense.');
+        setError(t('addExpense.pickMember'));
         return;
       }
     } else {
@@ -75,20 +76,25 @@ export default function AddExpenseScreen() {
         .map((memberID) => ({ user_id: memberID, value: parseFloat((values[memberID] ?? '').replace(',', '.')) || 0 }));
 
       if (splits.length === 0) {
-        setError('Pick at least one member to split the expense.');
+        setError(t('addExpense.pickMember'));
         return;
       }
       if (splitMethod === 'percentage') {
         const total = splits.reduce((sum, s) => sum + s.value, 0);
         if (Math.abs(total - 100) > 0.01) {
-          setError(`Percentages add up to ${total}, they must total 100.`);
+          setError(t('addExpense.percentagesMustTotal', { total }));
           return;
         }
       }
       if (splitMethod === 'fixed') {
         const total = splits.reduce((sum, s) => sum + s.value, 0);
         if (Math.abs(total - amountNumber) > 0.01) {
-          setError(`Amounts add up to $${total}, they must total $${amountNumber}.`);
+          setError(
+            t('addExpense.amountsMustTotal', {
+              total: formatAmount(total),
+              amount: formatAmount(amountNumber),
+            }),
+          );
           return;
         }
       }
@@ -107,7 +113,7 @@ export default function AddExpenseScreen() {
       });
       router.back();
     } catch {
-      setError('Could not add the expense. Check the details.');
+      setError(t('addExpense.addError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -117,7 +123,7 @@ export default function AddExpenseScreen() {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <ThemedText type="default">Loading…</ThemedText>
+          <ThemedText type="default">{t('addExpense.loading')}</ThemedText>
         </SafeAreaView>
       </ThemedView>
     );
@@ -126,12 +132,12 @@ export default function AddExpenseScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">New expense</ThemedText>
+        <ThemedText type="title">{t('addExpense.title')}</ThemedText>
 
         <TextInput
           value={description}
           onChangeText={setDescription}
-          placeholder="Description (e.g. Dinner)"
+          placeholder={t('addExpense.descriptionPlaceholder')}
           placeholderTextColor={theme.textSecondary}
           style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
         />
@@ -139,13 +145,13 @@ export default function AddExpenseScreen() {
         <TextInput
           value={amount}
           onChangeText={setAmount}
-          placeholder="Total amount"
+          placeholder={t('addExpense.amountPlaceholder')}
           placeholderTextColor={theme.textSecondary}
           keyboardType="decimal-pad"
           style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
         />
 
-        <ThemedText type="smallBold">Who paid?</ThemedText>
+        <ThemedText type="smallBold">{t('addExpense.whoPaid')}</ThemedText>
         <ThemedView style={styles.chipRow}>
           {group.members.map((member) => (
             <Pressable key={member.id} onPress={() => setPaidByID(member.id)}>
@@ -158,14 +164,14 @@ export default function AddExpenseScreen() {
           ))}
         </ThemedView>
 
-        <ThemedText type="smallBold">How is it split?</ThemedText>
+        <ThemedText type="smallBold">{t('addExpense.howSplit')}</ThemedText>
         <ThemedView style={styles.chipRow}>
           {SPLIT_METHODS.map((method) => (
             <Pressable key={method.value} onPress={() => setSplitMethod(method.value)}>
               <ThemedView
                 type={splitMethod === method.value ? 'backgroundSelected' : 'backgroundElement'}
                 style={styles.chip}>
-                <ThemedText type="small">{method.label}</ThemedText>
+                <ThemedText type="small">{t(method.labelKey)}</ThemedText>
               </ThemedView>
             </Pressable>
           ))}
@@ -186,7 +192,11 @@ export default function AddExpenseScreen() {
                 value={values[member.id] ?? ''}
                 onChangeText={(text) => setValues((prev) => ({ ...prev, [member.id]: text }))}
                 placeholder={
-                  splitMethod === 'percentage' ? '%' : splitMethod === 'fixed' ? '$' : 'units'
+                  splitMethod === 'percentage'
+                    ? '%'
+                    : splitMethod === 'fixed'
+                      ? '$'
+                      : t('addExpense.unitsPlaceholder')
                 }
                 placeholderTextColor={theme.textSecondary}
                 keyboardType="decimal-pad"
@@ -203,7 +213,7 @@ export default function AddExpenseScreen() {
           disabled={isSubmitting}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
           <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSubmitting ? 'Saving…' : 'Add expense'}
+            {isSubmitting ? t('addExpense.saving') : t('addExpense.add')}
           </ThemedText>
         </Pressable>
       </SafeAreaView>
