@@ -22,7 +22,7 @@ export default function AuthCallbackScreen() {
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <ThemedText>Iniciando sesión…</ThemedText>
+      <ThemedText>Signing in…</ThemedText>
     </ThemedView>
   );
 }

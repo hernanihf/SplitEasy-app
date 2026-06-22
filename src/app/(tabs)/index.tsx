@@ -26,7 +26,7 @@ export default function GroupsScreen() {
       const data = await api.get<Group[]>('/api/v1/groups');
       setGroups(data ?? []);
     } catch {
-      setError('No se pudieron cargar los grupos.');
+      setError('Could not load your groups.');
     } finally {
       setIsLoading(false);
     }
@@ -40,15 +40,15 @@ export default function GroupsScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.header}>
-          <ThemedText type="title">Tus grupos</ThemedText>
+          <ThemedText type="title">Your groups</ThemedText>
           <Pressable onPress={() => router.push('/groups/new')} style={styles.newButton}>
             <ThemedText type="smallBold" style={styles.newButtonText}>
-              + Nuevo
+              + New
             </ThemedText>
           </Pressable>
         </ThemedView>
 
-        {isLoading && <ThemedText type="default">Cargando…</ThemedText>}
+        {isLoading && <ThemedText type="default">Loading…</ThemedText>}
 
         {!isLoading && error && (
           <ThemedView type="backgroundElement" style={styles.emptyState}>
@@ -58,9 +58,9 @@ export default function GroupsScreen() {
 
         {!isLoading && !error && groups.length === 0 && (
           <ThemedView type="backgroundElement" style={styles.emptyState}>
-            <ThemedText type="default">Todavía no tenés grupos.</ThemedText>
+            <ThemedText type="default">No groups yet.</ThemedText>
             <ThemedText type="small" style={styles.hint}>
-              Creá uno para empezar a compartir gastos.
+              Create one to start sharing expenses.
             </ThemedText>
           </ThemedView>
         )}
@@ -81,7 +81,7 @@ export default function GroupsScreen() {
         )}
 
         <Pressable onPress={signOut} style={styles.signOut}>
-          <ThemedText type="smallBold">Cerrar sesión</ThemedText>
+          <ThemedText type="smallBold">Sign out</ThemedText>
         </Pressable>
       </SafeAreaView>
     </ThemedView>

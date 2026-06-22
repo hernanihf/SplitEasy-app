@@ -46,12 +46,12 @@ export default function ScanReceiptScreen() {
         pathname: '/groups/[id]/add-expense',
         params: {
           id: id as string,
-          description: scan.merchant_name || 'Ticket',
+          description: scan.merchant_name || 'Receipt',
           amount: String(scan.total_amount || ''),
         },
       });
     } catch {
-      setError('No pudimos leer el ticket. Probá con otra foto o cargá el gasto manualmente.');
+      setError("We couldn't read the receipt. Try another photo or add the expense manually.");
       setIsScanning(false);
     }
   };
@@ -59,7 +59,7 @@ export default function ScanReceiptScreen() {
   const pickFromCamera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      setError('Necesitamos permiso de cámara para escanear el ticket.');
+      setError('We need camera permission to scan the receipt.');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
@@ -71,7 +71,7 @@ export default function ScanReceiptScreen() {
   const pickFromLibrary = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setError('Necesitamos permiso para acceder a tus fotos.');
+      setError('We need permission to access your photos.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, mediaTypes: ['images'] });
@@ -83,24 +83,24 @@ export default function ScanReceiptScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Escanear ticket</ThemedText>
+        <ThemedText type="title">Scan receipt</ThemedText>
         <ThemedText type="default">
-          Sacá una foto o subí una imagen del ticket y la IA va a completar el gasto por vos.
+          Take a photo or upload a picture of the receipt and AI will fill in the expense for you.
         </ThemedText>
 
         {isScanning ? (
-          <ThemedText type="default">Leyendo el ticket…</ThemedText>
+          <ThemedText type="default">Reading the receipt…</ThemedText>
         ) : (
           <>
             <Pressable onPress={pickFromCamera} style={styles.button}>
               <ThemedText type="smallBold" style={styles.buttonText}>
-                📷 Tomar foto
+                📷 Take photo
               </ThemedText>
             </Pressable>
 
             <Pressable onPress={pickFromLibrary} style={[styles.button, styles.secondaryButton]}>
               <ThemedText type="smallBold" style={styles.buttonText}>
-                🖼️ Elegir de la galería
+                🖼️ Choose from gallery
               </ThemedText>
             </Pressable>
           </>

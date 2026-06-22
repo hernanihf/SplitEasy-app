@@ -13,10 +13,10 @@ import type { Group } from '@/app/groups/[id]/index';
 type SplitMethod = 'equal' | 'percentage' | 'fixed' | 'shares';
 
 const SPLIT_METHODS: { value: SplitMethod; label: string }[] = [
-  { value: 'equal', label: 'Partes iguales' },
-  { value: 'percentage', label: 'Porcentajes' },
-  { value: 'fixed', label: 'Montos fijos' },
-  { value: 'shares', label: 'Cantidades' },
+  { value: 'equal', label: 'Equally' },
+  { value: 'percentage', label: 'Percentages' },
+  { value: 'fixed', label: 'Fixed amounts' },
+  { value: 'shares', label: 'Shares' },
 ];
 
 export default function AddExpenseScreen() {
@@ -52,11 +52,11 @@ export default function AddExpenseScreen() {
   const handleSubmit = async () => {
     if (!group || !paidByID) return;
     if (!description.trim()) {
-      setError('Ponele una descripción al gasto.');
+      setError('Add a description for the expense.');
       return;
     }
     if (!amountNumber || amountNumber <= 0) {
-      setError('El monto tiene que ser mayor a 0.');
+      setError('The amount must be greater than 0.');
       return;
     }
 
@@ -66,7 +66,7 @@ export default function AddExpenseScreen() {
     if (splitMethod === 'equal') {
       splits = memberIDs.filter((memberID) => included[memberID]).map((memberID) => ({ user_id: memberID, value: 0 }));
       if (splits.length === 0) {
-        setError('Elegí al menos un miembro para dividir el gasto.');
+        setError('Pick at least one member to split the expense.');
         return;
       }
     } else {
@@ -75,20 +75,20 @@ export default function AddExpenseScreen() {
         .map((memberID) => ({ user_id: memberID, value: parseFloat((values[memberID] ?? '').replace(',', '.')) || 0 }));
 
       if (splits.length === 0) {
-        setError('Elegí al menos un miembro para dividir el gasto.');
+        setError('Pick at least one member to split the expense.');
         return;
       }
       if (splitMethod === 'percentage') {
         const total = splits.reduce((sum, s) => sum + s.value, 0);
         if (Math.abs(total - 100) > 0.01) {
-          setError(`Los porcentajes suman ${total}, tienen que sumar 100.`);
+          setError(`Percentages add up to ${total}, they must total 100.`);
           return;
         }
       }
       if (splitMethod === 'fixed') {
         const total = splits.reduce((sum, s) => sum + s.value, 0);
         if (Math.abs(total - amountNumber) > 0.01) {
-          setError(`Los montos suman $${total}, tienen que sumar $${amountNumber}.`);
+          setError(`Amounts add up to $${total}, they must total $${amountNumber}.`);
           return;
         }
       }
@@ -107,7 +107,7 @@ export default function AddExpenseScreen() {
       });
       router.back();
     } catch {
-      setError('No se pudo agregar el gasto. Revisá los datos.');
+      setError('Could not add the expense. Check the details.');
     } finally {
       setIsSubmitting(false);
     }
@@ -117,7 +117,7 @@ export default function AddExpenseScreen() {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <ThemedText type="default">Cargando…</ThemedText>
+          <ThemedText type="default">Loading…</ThemedText>
         </SafeAreaView>
       </ThemedView>
     );
@@ -126,12 +126,12 @@ export default function AddExpenseScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Nuevo gasto</ThemedText>
+        <ThemedText type="title">New expense</ThemedText>
 
         <TextInput
           value={description}
           onChangeText={setDescription}
-          placeholder="Descripción (ej: Cena)"
+          placeholder="Description (e.g. Dinner)"
           placeholderTextColor={theme.textSecondary}
           style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
         />
@@ -139,13 +139,13 @@ export default function AddExpenseScreen() {
         <TextInput
           value={amount}
           onChangeText={setAmount}
-          placeholder="Monto total"
+          placeholder="Total amount"
           placeholderTextColor={theme.textSecondary}
           keyboardType="decimal-pad"
           style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
         />
 
-        <ThemedText type="smallBold">¿Quién pagó?</ThemedText>
+        <ThemedText type="smallBold">Who paid?</ThemedText>
         <ThemedView style={styles.chipRow}>
           {group.members.map((member) => (
             <Pressable key={member.id} onPress={() => setPaidByID(member.id)}>
@@ -158,7 +158,7 @@ export default function AddExpenseScreen() {
           ))}
         </ThemedView>
 
-        <ThemedText type="smallBold">¿Cómo se divide?</ThemedText>
+        <ThemedText type="smallBold">How is it split?</ThemedText>
         <ThemedView style={styles.chipRow}>
           {SPLIT_METHODS.map((method) => (
             <Pressable key={method.value} onPress={() => setSplitMethod(method.value)}>
@@ -186,7 +186,7 @@ export default function AddExpenseScreen() {
                 value={values[member.id] ?? ''}
                 onChangeText={(text) => setValues((prev) => ({ ...prev, [member.id]: text }))}
                 placeholder={
-                  splitMethod === 'percentage' ? '%' : splitMethod === 'fixed' ? '$' : 'unidades'
+                  splitMethod === 'percentage' ? '%' : splitMethod === 'fixed' ? '$' : 'units'
                 }
                 placeholderTextColor={theme.textSecondary}
                 keyboardType="decimal-pad"
@@ -203,7 +203,7 @@ export default function AddExpenseScreen() {
           disabled={isSubmitting}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
           <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSubmitting ? 'Guardando…' : 'Agregar gasto'}
+            {isSubmitting ? 'Saving…' : 'Add expense'}
           </ThemedText>
         </Pressable>
       </SafeAreaView>

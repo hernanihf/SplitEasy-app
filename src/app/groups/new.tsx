@@ -23,7 +23,7 @@ export default function NewGroupScreen() {
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      setError('Ponele un nombre al grupo.');
+      setError('Give the group a name.');
       return;
     }
     setIsSubmitting(true);
@@ -32,7 +32,7 @@ export default function NewGroupScreen() {
       const group = await api.post<Group>('/api/v1/groups', { name: name.trim() });
       router.replace(`/groups/${group.id}`);
     } catch {
-      setError('No se pudo crear el grupo. Probá de nuevo.');
+      setError('Could not create the group. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -41,12 +41,12 @@ export default function NewGroupScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Nuevo grupo</ThemedText>
+        <ThemedText type="title">New group</ThemedText>
 
         <TextInput
           value={name}
           onChangeText={setName}
-          placeholder="Ej: Viaje a Bariloche"
+          placeholder="e.g. Trip to the coast"
           placeholderTextColor={theme.textSecondary}
           style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
           autoFocus
@@ -59,7 +59,7 @@ export default function NewGroupScreen() {
           disabled={isSubmitting}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
           <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSubmitting ? 'Creando…' : 'Crear grupo'}
+            {isSubmitting ? 'Creating…' : 'Create group'}
           </ThemedText>
         </Pressable>
       </SafeAreaView>

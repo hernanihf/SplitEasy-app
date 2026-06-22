@@ -39,7 +39,7 @@ export default function LoginScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ThemedText type="title">SplitEasy</ThemedText>
         <ThemedText type="default" style={styles.subtitle}>
-          Organizá los gastos compartidos con tu grupo.
+          Organize shared expenses with your group.
         </ThemedText>
 
         <Pressable
@@ -47,13 +47,13 @@ export default function LoginScreen() {
           disabled={isSigningIn}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
           <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSigningIn ? 'Conectando…' : 'Continuar con Google'}
+            {isSigningIn ? 'Connecting…' : 'Continue with Google'}
           </ThemedText>
         </Pressable>
 
         {Platform.OS === 'web' && (
           <ThemedText type="small" style={styles.hint}>
-            Se abrirá una ventana de Google para iniciar sesión.
+            A Google window will open for you to sign in.
           </ThemedText>
         )}
       </SafeAreaView>

@@ -29,11 +29,11 @@ export default function SettleScreen() {
   const handleSettle = async () => {
     const paid = parseFloat(value.replace(',', '.'));
     if (!paid || paid <= 0) {
-      setError('El monto tiene que ser mayor a 0.');
+      setError('The amount must be greater than 0.');
       return;
     }
     if (paid > maxAmount + 0.01) {
-      setError(`No podés saldar más de $${maxAmount.toFixed(2)}.`);
+      setError(`You can't settle more than $${maxAmount.toFixed(2)}.`);
       return;
     }
 
@@ -47,7 +47,7 @@ export default function SettleScreen() {
       });
       router.back();
     } catch {
-      setError('No se pudo registrar el pago. Probá de nuevo.');
+      setError('Could not record the payment. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -56,22 +56,22 @@ export default function SettleScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Saldar deuda</ThemedText>
+        <ThemedText type="title">Settle up</ThemedText>
 
         <ThemedView type="backgroundElement" style={styles.summary}>
           <ThemedText type="default">
-            {fromName ?? `Usuario #${from}`} le paga a {toName ?? `Usuario #${to}`}
+            {fromName ?? `User #${from}`} pays {toName ?? `User #${to}`}
           </ThemedText>
           <ThemedText type="small" style={styles.hint}>
-            Deuda actual: ${maxAmount.toFixed(2)}
+            Current debt: ${maxAmount.toFixed(2)}
           </ThemedText>
         </ThemedView>
 
-        <ThemedText type="smallBold">¿Cuánto se paga?</ThemedText>
+        <ThemedText type="smallBold">How much is being paid?</ThemedText>
         <TextInput
           value={value}
           onChangeText={setValue}
-          placeholder="Monto"
+          placeholder="Amount"
           placeholderTextColor={theme.textSecondary}
           keyboardType="decimal-pad"
           style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
@@ -85,7 +85,7 @@ export default function SettleScreen() {
           disabled={isSubmitting}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
           <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSubmitting ? 'Registrando…' : 'Registrar pago'}
+            {isSubmitting ? 'Recording…' : 'Record payment'}
           </ThemedText>
         </Pressable>
       </SafeAreaView>

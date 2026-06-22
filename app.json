@@ -26,7 +26,7 @@
       "favicon": "./assets/images/favicon.png",
       "name": "SplitEasy",
       "shortName": "SplitEasy",
-      "lang": "es",
+      "lang": "en",
       "themeColor": "#208AEF",
       "backgroundColor": "#208AEF",
       "display": "standalone",

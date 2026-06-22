@@ -38,7 +38,7 @@ export default function GroupDetailScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const memberName = useCallback(
-    (userID: number) => group?.members.find((m) => m.id === userID)?.name ?? `Usuario #${userID}`,
+    (userID: number) => group?.members.find((m) => m.id === userID)?.name ?? `User #${userID}`,
     [group],
   );
 
@@ -57,7 +57,7 @@ export default function GroupDetailScreen() {
         setExpenses(expensesData ?? []);
         setDebts(debtsData ?? []);
       })
-      .catch(() => setError('No se pudo cargar el grupo.'))
+      .catch(() => setError('Could not load the group.'))
       .finally(() => setIsLoading(false));
   }, [id, api]);
 
@@ -67,7 +67,7 @@ export default function GroupDetailScreen() {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <ThemedText type="default">Cargando…</ThemedText>
+          <ThemedText type="default">Loading…</ThemedText>
         </SafeAreaView>
       </ThemedView>
     );
@@ -77,7 +77,7 @@ export default function GroupDetailScreen() {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <ThemedText type="default">{error ?? 'Grupo no encontrado.'}</ThemedText>
+          <ThemedText type="default">{error ?? 'Group not found.'}</ThemedText>
         </SafeAreaView>
       </ThemedView>
     );
@@ -93,14 +93,14 @@ export default function GroupDetailScreen() {
               onPress={() => router.push(`/groups/${id}/scan-receipt`)}
               style={[styles.newButton, styles.scanButton]}>
               <ThemedText type="smallBold" style={styles.newButtonText}>
-                📷 Ticket
+                📷 Receipt
               </ThemedText>
             </Pressable>
             <Pressable
               onPress={() => router.push(`/groups/${id}/add-expense`)}
               style={styles.newButton}>
               <ThemedText type="smallBold" style={styles.newButtonText}>
-                + Gasto
+                + Expense
               </ThemedText>
             </Pressable>
           </ThemedView>
@@ -108,7 +108,7 @@ export default function GroupDetailScreen() {
 
         <ThemedText type="subtitle">Balances</ThemedText>
         {debts.length === 0 ? (
-          <ThemedText type="default">Todo saldado.</ThemedText>
+          <ThemedText type="default">All settled up.</ThemedText>
         ) : (
           debts.map((debt, index) => (
             <Pressable
@@ -128,28 +128,28 @@ export default function GroupDetailScreen() {
               }>
               <ThemedView type="backgroundElement" style={styles.debtRow}>
                 <ThemedText type="default">
-                  {memberName(debt.from_user_id)} le debe a {memberName(debt.to_user_id)}: $
+                  {memberName(debt.from_user_id)} owes {memberName(debt.to_user_id)}: $
                   {debt.amount.toFixed(2)}
                 </ThemedText>
                 <ThemedText type="smallBold" style={styles.settleHint}>
-                  Saldar ›
+                  Settle ›
                 </ThemedText>
               </ThemedView>
             </Pressable>
           ))
         )}
 
-        <ThemedText type="subtitle">Gastos</ThemedText>
+        <ThemedText type="subtitle">Expenses</ThemedText>
         <FlatList
           data={expenses}
           keyExtractor={(expense) => String(expense.id)}
           contentContainerStyle={styles.list}
-          ListEmptyComponent={<ThemedText type="default">Todavía no hay gastos.</ThemedText>}
+          ListEmptyComponent={<ThemedText type="default">No expenses yet.</ThemedText>}
           renderItem={({ item }) => (
             <ThemedView type="backgroundElement" style={styles.row}>
               <ThemedText type="default">{item.description}</ThemedText>
               <ThemedText type="small">
-                Pagó {item.paid_by.name} · ${item.amount.toFixed(2)}
+                Paid by {item.paid_by.name} · ${item.amount.toFixed(2)}
               </ThemedText>
             </ThemedView>
           )}
