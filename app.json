@@ -44,6 +44,15 @@
             "imageWidth": 76
           }
         }
+      ],
+      "expo-web-browser",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SplitEasy necesita acceso a tus fotos para escanear tickets.",
+          "cameraPermission": "SplitEasy necesita la cámara para escanear tickets."
+        }
       ]
     ],
     "experiments": {
