@@ -1,3 +1,4 @@
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -17,16 +18,13 @@ type ReceiptScan = {
   items: { description: string; price: number }[];
 };
 
-async function assetToFormData(asset: ImagePicker.ImagePickerAsset): Promise<FormData> {
-  const mimeType = asset.mimeType ?? 'image/jpeg';
-  const fileName = asset.fileName ?? `receipt.${mimeType.split('/')[1] ?? 'jpg'}`;
-
+async function fileToFormData(uri: string, name: string, mimeType: string): Promise<FormData> {
   const formData = new FormData();
   if (Platform.OS === 'web') {
-    const blob = await (await fetch(asset.uri)).blob();
-    formData.append('image', blob, fileName);
+    const blob = await (await fetch(uri)).blob();
+    formData.append('image', blob, name);
   } else {
-    formData.append('image', { uri: asset.uri, name: fileName, type: mimeType } as unknown as Blob);
+    formData.append('image', { uri, name, type: mimeType } as unknown as Blob);
   }
   return formData;
 }
@@ -37,11 +35,11 @@ export default function ScanReceiptScreen() {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleScan = async (asset: ImagePicker.ImagePickerAsset) => {
+  const scanFile = async (uri: string, name: string, mimeType: string) => {
     setIsScanning(true);
     setError(null);
     try {
-      const formData = await assetToFormData(asset);
+      const formData = await fileToFormData(uri, name, mimeType);
       const scan = await api.postFormData<ReceiptScan>('/api/v1/receipts/scan', formData);
       router.replace({
         pathname: '/groups/[id]/add-expense',
@@ -57,6 +55,12 @@ export default function ScanReceiptScreen() {
     }
   };
 
+  const scanImageAsset = (asset: ImagePicker.ImagePickerAsset) => {
+    const mimeType = asset.mimeType ?? 'image/jpeg';
+    const name = asset.fileName ?? `receipt.${mimeType.split('/')[1] ?? 'jpg'}`;
+    scanFile(asset.uri, name, mimeType);
+  };
+
   const pickFromCamera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
@@ -65,7 +69,7 @@ export default function ScanReceiptScreen() {
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (!result.canceled) {
-      handleScan(result.assets[0]);
+      scanImageAsset(result.assets[0]);
     }
   };
 
@@ -77,7 +81,18 @@ export default function ScanReceiptScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, mediaTypes: ['images'] });
     if (!result.canceled) {
-      handleScan(result.assets[0]);
+      scanImageAsset(result.assets[0]);
+    }
+  };
+
+  const pickDocument = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/*'],
+      copyToCacheDirectory: true,
+    });
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      scanFile(asset.uri, asset.name, asset.mimeType ?? 'application/pdf');
     }
   };
 
@@ -100,6 +115,12 @@ export default function ScanReceiptScreen() {
             <Pressable onPress={pickFromLibrary} style={[styles.button, styles.secondaryButton]}>
               <ThemedText type="smallBold" style={styles.buttonText}>
                 {t('scanReceipt.chooseFromGallery')}
+              </ThemedText>
+            </Pressable>
+
+            <Pressable onPress={pickDocument} style={[styles.button, styles.secondaryButton]}>
+              <ThemedText type="smallBold" style={styles.buttonText}>
+                {t('scanReceipt.choosePdf')}
               </ThemedText>
             </Pressable>
           </>
