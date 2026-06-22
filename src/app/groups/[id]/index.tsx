@@ -111,12 +111,31 @@ export default function GroupDetailScreen() {
           <ThemedText type="default">Todo saldado.</ThemedText>
         ) : (
           debts.map((debt, index) => (
-            <ThemedView key={index} type="backgroundElement" style={styles.row}>
-              <ThemedText type="default">
-                {memberName(debt.from_user_id)} le debe a {memberName(debt.to_user_id)}: $
-                {debt.amount.toFixed(2)}
-              </ThemedText>
-            </ThemedView>
+            <Pressable
+              key={index}
+              onPress={() =>
+                router.push({
+                  pathname: '/groups/[id]/settle',
+                  params: {
+                    id: id as string,
+                    from: String(debt.from_user_id),
+                    to: String(debt.to_user_id),
+                    amount: String(debt.amount),
+                    fromName: memberName(debt.from_user_id),
+                    toName: memberName(debt.to_user_id),
+                  },
+                })
+              }>
+              <ThemedView type="backgroundElement" style={styles.debtRow}>
+                <ThemedText type="default">
+                  {memberName(debt.from_user_id)} le debe a {memberName(debt.to_user_id)}: $
+                  {debt.amount.toFixed(2)}
+                </ThemedText>
+                <ThemedText type="smallBold" style={styles.settleHint}>
+                  Saldar ›
+                </ThemedText>
+              </ThemedView>
+            </Pressable>
           ))
         )}
 
@@ -181,5 +200,15 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     padding: Spacing.three,
     gap: Spacing.half,
+  },
+  debtRow: {
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  settleHint: {
+    color: '#1FA971',
   },
 });
