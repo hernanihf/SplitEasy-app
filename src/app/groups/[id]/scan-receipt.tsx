@@ -2,12 +2,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { Font, Palette, Radius } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 
@@ -32,11 +30,11 @@ async function fileToFormData(uri: string, name: string, mimeType: string): Prom
 export default function ScanReceiptScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api } = useAuth();
-  const [isScanning, setIsScanning] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const scanFile = async (uri: string, name: string, mimeType: string) => {
-    setIsScanning(true);
+    setScanning(true);
     setError(null);
     try {
       const formData = await fileToFormData(uri, name, mimeType);
@@ -51,7 +49,7 @@ export default function ScanReceiptScreen() {
       });
     } catch {
       setError(t('scanReceipt.readError'));
-      setIsScanning(false);
+      setScanning(false);
     }
   };
 
@@ -63,26 +61,16 @@ export default function ScanReceiptScreen() {
 
   const pickFromCamera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setError(t('scanReceipt.cameraPermission'));
-      return;
-    }
+    if (!permission.granted) return setError(t('scanReceipt.cameraPermission'));
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
-    if (!result.canceled) {
-      scanImageAsset(result.assets[0]);
-    }
+    if (!result.canceled) scanImageAsset(result.assets[0]);
   };
 
   const pickFromLibrary = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError(t('scanReceipt.photosPermission'));
-      return;
-    }
+    if (!permission.granted) return setError(t('scanReceipt.photosPermission'));
     const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, mediaTypes: ['images'] });
-    if (!result.canceled) {
-      scanImageAsset(result.assets[0]);
-    }
+    if (!result.canceled) scanImageAsset(result.assets[0]);
   };
 
   const pickDocument = async () => {
@@ -97,65 +85,89 @@ export default function ScanReceiptScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">{t('scanReceipt.title')}</ThemedText>
-        <ThemedText type="default">{t('scanReceipt.description')}</ThemedText>
+    <View style={styles.root}>
+      <SafeAreaView edges={['top']} style={styles.safe}>
+        <View style={styles.topbar}>
+          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
+            <Text style={styles.back}>‹</Text>
+          </Pressable>
+          <Text style={styles.topTitle}>{t('scanReceipt.title')}</Text>
+          <View style={{ width: 38 }} />
+        </View>
 
-        {isScanning ? (
-          <ThemedText type="default">{t('scanReceipt.reading')}</ThemedText>
-        ) : (
-          <>
-            <Pressable onPress={pickFromCamera} style={styles.button}>
-              <ThemedText type="smallBold" style={styles.buttonText}>
-                {t('scanReceipt.takePhoto')}
-              </ThemedText>
-            </Pressable>
+        <View style={styles.body}>
+          <Text style={styles.desc}>{t('scanReceipt.description')}</Text>
 
-            <Pressable onPress={pickFromLibrary} style={[styles.button, styles.secondaryButton]}>
-              <ThemedText type="smallBold" style={styles.buttonText}>
-                {t('scanReceipt.chooseFromGallery')}
-              </ThemedText>
-            </Pressable>
+          {scanning ? (
+            <View style={styles.scanningRow}>
+              <View style={styles.spinner} />
+              <Text style={styles.scanningText}>{t('scanReceipt.reading')}</Text>
+            </View>
+          ) : (
+            <View style={styles.buttons}>
+              <Pressable onPress={pickFromCamera} style={styles.button}>
+                <Text style={styles.buttonText}>{t('scanReceipt.takePhoto')}</Text>
+              </Pressable>
+              <Pressable onPress={pickFromLibrary} style={[styles.button, styles.secondary]}>
+                <Text style={styles.buttonText}>{t('scanReceipt.chooseFromGallery')}</Text>
+              </Pressable>
+              <Pressable onPress={pickDocument} style={[styles.button, styles.secondary]}>
+                <Text style={styles.buttonText}>{t('scanReceipt.choosePdf')}</Text>
+              </Pressable>
+            </View>
+          )}
 
-            <Pressable onPress={pickDocument} style={[styles.button, styles.secondaryButton]}>
-              <ThemedText type="smallBold" style={styles.buttonText}>
-                {t('scanReceipt.choosePdf')}
-              </ThemedText>
-            </Pressable>
-          </>
-        )}
-
-        {error && <ThemedText type="small">{error}</ThemedText>}
+          {error && <Text style={styles.error}>{error}</Text>}
+        </View>
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.five,
-    gap: Spacing.three,
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  button: {
-    backgroundColor: '#208AEF',
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.three,
+  root: { flex: 1, backgroundColor: Palette.bg },
+  safe: { flex: 1 },
+  topbar: {
+    paddingHorizontal: 18,
+    paddingTop: 2,
+    paddingBottom: 6,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  secondaryButton: {
-    backgroundColor: '#5B8DEF',
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonText: {
-    color: '#fff',
+  back: { fontSize: 22, color: Palette.ink, lineHeight: 24 },
+  topTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
+  body: { flex: 1, paddingHorizontal: 24, paddingTop: 12, gap: 16 },
+  desc: { fontSize: 15, lineHeight: 22, color: Palette.muted2, fontFamily: Font.sans },
+  buttons: { gap: 12 },
+  button: {
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: Palette.green,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  secondary: { backgroundColor: Palette.ink },
+  buttonText: { color: '#fff', fontSize: 15, fontFamily: Font.sansSemibold },
+  scanningRow: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 10 },
+  spinner: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2.5,
+    borderColor: '#DCE4DF',
+    borderTopColor: Palette.green,
+  },
+  scanningText: { fontSize: 14, fontFamily: Font.sansSemibold, color: Palette.ink },
+  error: { color: Palette.red, fontSize: 13 },
 });

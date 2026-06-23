@@ -1,103 +1,183 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useTheme } from '@/hooks/use-theme';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { Font, GROUP_EMOJIS, Palette, Radius } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 
-type Group = {
-  id: number;
-  name: string;
-};
+type Group = { id: number };
 
 export default function NewGroupScreen() {
   const { api } = useAuth();
-  const theme = useTheme();
   const [name, setName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emoji, setEmoji] = useState(GROUP_EMOJIS[0]);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleCreate = async () => {
-    if (!name.trim()) {
-      setError(t('newGroup.nameRequired'));
-      return;
-    }
-    setIsSubmitting(true);
+  const create = async () => {
+    if (!name.trim()) return setError(t('newGroup.nameRequired'));
+    setSubmitting(true);
     setError(null);
     try {
-      const group = await api.post<Group>('/api/v1/groups', { name: name.trim() });
+      const group = await api.post<Group>('/api/v1/groups', { name: name.trim(), emoji });
       router.replace(`/groups/${group.id}`);
     } catch {
       setError(t('newGroup.createError'));
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">{t('newGroup.title')}</ThemedText>
+    <View style={styles.root}>
+      <SafeAreaView edges={['top']} style={styles.safe}>
+        <View style={styles.topbar}>
+          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
+            <Text style={styles.back}>‹</Text>
+          </Pressable>
+          <Text style={styles.topTitle}>{t('newGroup.title')}</Text>
+          <View style={{ width: 38 }} />
+        </View>
 
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          placeholder={t('newGroup.namePlaceholder')}
-          placeholderTextColor={theme.textSecondary}
-          style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-          autoFocus
-        />
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <View style={styles.emojiPreviewWrap}>
+            <View style={styles.emojiPreview}>
+              <Text style={styles.emojiBig}>{emoji}</Text>
+            </View>
+            <View style={styles.emojiOptions}>
+              {GROUP_EMOJIS.slice(0, 8).map((em) => (
+                <Pressable
+                  key={em}
+                  onPress={() => setEmoji(em)}
+                  style={[styles.emojiOption, em === emoji && styles.emojiOptionActive]}>
+                  <Text style={styles.emojiOptionChar}>{em}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
 
-        {error && <ThemedText type="small">{error}</ThemedText>}
+          <Text style={styles.label}>{t('newGroup.groupName')}</Text>
+          <View style={styles.inputCard}>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder={t('newGroup.namePlaceholder')}
+              placeholderTextColor={Palette.muted}
+              style={styles.input}
+              autoFocus
+            />
+          </View>
 
-        <Pressable
-          onPress={handleCreate}
-          disabled={isSubmitting}
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
-          <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSubmitting ? t('newGroup.creating') : t('newGroup.create')}
-          </ThemedText>
-        </Pressable>
+          <View style={styles.hintCard}>
+            <Text style={styles.hintGlyph}>🔗</Text>
+            <Text style={styles.hint}>{t('newGroup.membersHint')}</Text>
+          </View>
+
+          {error && <Text style={styles.error}>{error}</Text>}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Pressable
+            onPress={create}
+            disabled={submitting}
+            style={[styles.saveBtn, submitting && styles.disabled]}>
+            <Text style={styles.saveText}>
+              {submitting ? t('newGroup.creating') : t('newGroup.create')}
+            </Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  root: { flex: 1, backgroundColor: Palette.bg },
+  safe: { flex: 1 },
+  topbar: {
+    paddingHorizontal: 18,
+    paddingTop: 2,
+    paddingBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.five,
-    gap: Spacing.three,
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  input: {
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Palette.card,
     borderWidth: 1,
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-    fontSize: 16,
+    borderColor: Palette.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  button: {
-    backgroundColor: '#208AEF',
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.three,
+  back: { fontSize: 22, color: Palette.ink, lineHeight: 24 },
+  topTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
+  scroll: { paddingHorizontal: 20, paddingBottom: 24 },
+  emojiPreviewWrap: { alignItems: 'center', paddingVertical: 18 },
+  emojiPreview: {
+    width: 72,
+    height: 72,
+    borderRadius: Radius.xl,
+    backgroundColor: Palette.greenTint,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonPressed: {
-    opacity: 0.8,
+  emojiBig: { fontSize: 32 },
+  emojiOptions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 7, marginTop: 13 },
+  emojiOption: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Palette.card,
+    borderWidth: 1.5,
+    borderColor: Palette.cardBorder,
   },
-  buttonText: {
-    color: '#fff',
+  emojiOptionActive: { backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
+  emojiOptionChar: { fontSize: 18 },
+  label: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink, marginBottom: 8, marginLeft: 4 },
+  inputCard: {
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    borderRadius: Radius.md,
+    paddingHorizontal: 14,
+    marginBottom: 18,
   },
+  input: { height: 50, fontSize: 15, color: Palette.ink, fontFamily: Font.sans },
+  hintCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    borderRadius: Radius.md,
+    padding: 14,
+  },
+  hintGlyph: { fontSize: 17 },
+  hint: { flex: 1, fontSize: 13, color: Palette.muted2, fontFamily: Font.sans },
+  error: { color: Palette.red, fontSize: 13, marginTop: 12, marginLeft: 4 },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 26,
+    borderTopWidth: 1,
+    borderTopColor: Palette.cardBorder,
+    backgroundColor: Palette.bg,
+  },
+  saveBtn: {
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: Palette.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabled: { opacity: 0.6 },
+  saveText: { color: '#fff', fontSize: 15.5, fontFamily: Font.sansSemibold },
 });

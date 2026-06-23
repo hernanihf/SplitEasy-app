@@ -1,12 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Font, Palette, Radius, avatarColor, initial } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
 
@@ -20,25 +17,22 @@ export default function SettleScreen() {
     toName?: string;
   }>();
   const { api } = useAuth();
-  const theme = useTheme();
 
-  const maxAmount = useMemo(() => parseFloat(amount ?? '0'), [amount]);
+  const maxAmount = useMemo(() => parseFloat(amount ?? '0') || 0, [amount]);
   const [value, setValue] = useState(amount ?? '');
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSettle = async () => {
-    const paid = parseFloat(value.replace(',', '.'));
-    if (!paid || paid <= 0) {
-      setError(t('settle.amountPositive'));
-      return;
-    }
-    if (paid > maxAmount + 0.01) {
-      setError(t('settle.amountTooHigh', { max: formatAmount(maxAmount) }));
-      return;
-    }
+  const fName = fromName ?? t('groupDetail.userN', { id: from });
+  const tName = toName ?? t('groupDetail.userN', { id: to });
 
-    setIsSubmitting(true);
+  const confirm = async () => {
+    const paid = parseFloat(value.replace(',', '.')) || 0;
+    if (paid <= 0) return setError(t('settle.amountPositive'));
+    if (paid > maxAmount + 0.01)
+      return setError(t('settle.amountTooHigh', { max: formatAmount(maxAmount) }));
+
+    setSubmitting(true);
     setError(null);
     try {
       await api.post(`/api/v1/groups/${id}/settlements`, {
@@ -50,91 +44,122 @@ export default function SettleScreen() {
     } catch {
       setError(t('settle.recordError'));
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">{t('settle.title')}</ThemedText>
+    <View style={styles.root}>
+      <Pressable style={styles.dim} onPress={() => router.back()} />
+      <SafeAreaView edges={['bottom']} style={styles.sheetWrap}>
+        <View style={styles.sheet}>
+          <View style={styles.grab} />
+          <Text style={styles.title}>{t('settle.title')}</Text>
+          <Text style={styles.subtitle}>{t('settle.subtitle')}</Text>
 
-        <ThemedView type="backgroundElement" style={styles.summary}>
-          <ThemedText type="default">
-            {t('settle.pays', {
-              from: fromName ?? t('groupDetail.userN', { id: from }),
-              to: toName ?? t('groupDetail.userN', { id: to }),
-            })}
-          </ThemedText>
-          <ThemedText type="small" style={styles.hint}>
-            {t('settle.currentDebt', { amount: formatAmount(maxAmount) })}
-          </ThemedText>
-        </ThemedView>
+          <View style={styles.flow}>
+            <View style={styles.person}>
+              <View style={[styles.avatar, { backgroundColor: avatarColor(Number(from)) }]}>
+                <Text style={styles.avatarText}>{initial(fName)}</Text>
+              </View>
+              <Text style={styles.personName}>{fName}</Text>
+            </View>
+            <View style={styles.person}>
+              <Text style={styles.arrow}>→</Text>
+              <Text style={styles.flowAmount}>{formatAmount(maxAmount)}</Text>
+            </View>
+            <View style={styles.person}>
+              <View style={[styles.avatar, { backgroundColor: avatarColor(Number(to)) }]}>
+                <Text style={styles.avatarText}>{initial(tName)}</Text>
+              </View>
+              <Text style={styles.personName}>{tName}</Text>
+            </View>
+          </View>
 
-        <ThemedText type="smallBold">{t('settle.howMuch')}</ThemedText>
-        <TextInput
-          value={value}
-          onChangeText={setValue}
-          placeholder={t('settle.amountPlaceholder')}
-          placeholderTextColor={theme.textSecondary}
-          keyboardType="decimal-pad"
-          style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-          autoFocus
-        />
+          <Text style={styles.howMuch}>{t('settle.howMuch')}</Text>
+          <View style={styles.amountBox}>
+            <Text style={styles.dollar}>$</Text>
+            <TextInput
+              value={value}
+              onChangeText={setValue}
+              keyboardType="decimal-pad"
+              placeholder={t('settle.amountPlaceholder')}
+              placeholderTextColor={Palette.muted}
+              style={styles.amountInput}
+              autoFocus
+            />
+          </View>
 
-        {error && <ThemedText type="small">{error}</ThemedText>}
+          {error && <Text style={styles.error}>{error}</Text>}
 
-        <Pressable
-          onPress={handleSettle}
-          disabled={isSubmitting}
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
-          <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSubmitting ? t('settle.recording') : t('settle.record')}
-          </ThemedText>
-        </Pressable>
+          <Pressable
+            onPress={confirm}
+            disabled={submitting}
+            style={[styles.confirm, submitting && styles.disabled]}>
+            <Text style={styles.confirmText}>{t('settle.confirm')}</Text>
+          </Pressable>
+          <Pressable onPress={() => router.back()} style={styles.cancel}>
+            <Text style={styles.cancelText}>{t('settle.cancel')}</Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  root: { flex: 1, justifyContent: 'flex-end' },
+  dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,16,12,0.42)' },
+  sheetWrap: { width: '100%' },
+  sheet: {
+    backgroundColor: Palette.card,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    paddingTop: 8,
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.five,
-    gap: Spacing.three,
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    width: '100%',
+  grab: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E2E6E3', alignSelf: 'center', marginVertical: 12 },
+  title: { fontSize: 19, fontFamily: Font.sansBold, letterSpacing: -0.4, color: Palette.ink },
+  subtitle: { marginTop: 4, marginBottom: 20, fontSize: 13.5, color: Palette.muted },
+  flow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    padding: 20,
+    backgroundColor: Palette.bg,
+    borderRadius: Radius.lg,
   },
-  summary: {
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-    gap: Spacing.half,
+  person: { alignItems: 'center' },
+  avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#fff', fontSize: 18, fontFamily: Font.sansSemibold },
+  personName: { marginTop: 7, fontSize: 12, fontFamily: Font.sansMedium, color: Palette.ink },
+  arrow: { fontSize: 20, color: Palette.green },
+  flowAmount: { marginTop: 4, fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink },
+  howMuch: { marginTop: 18, marginBottom: 9, fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink },
+  amountBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Palette.inputBg,
+    borderRadius: Radius.md,
+    paddingHorizontal: 14,
+    height: 52,
   },
-  hint: {
-    opacity: 0.7,
+  dollar: { fontFamily: Font.monoSemibold, fontSize: 18, color: Palette.ink },
+  amountInput: { flex: 1, fontFamily: Font.monoSemibold, fontSize: 18, color: Palette.ink, padding: 0 },
+  error: { color: Palette.red, fontSize: 13, marginTop: 10 },
+  confirm: {
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: Palette.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#1FA971',
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.three,
-  },
-  buttonPressed: {
-    opacity: 0.8,
-  },
-  buttonText: {
-    color: '#fff',
-  },
+  disabled: { opacity: 0.6 },
+  confirmText: { color: '#fff', fontSize: 15.5, fontFamily: Font.sansSemibold },
+  cancel: { height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  cancelText: { color: Palette.muted, fontSize: 14, fontFamily: Font.sansSemibold },
 });

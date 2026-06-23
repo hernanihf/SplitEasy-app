@@ -1,14 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { Font, Palette } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 
-// On web, the OAuth redirect lands here directly (no in-app browser to close).
-// On native, expo-web-browser intercepts this URL before it ever renders, but
-// we keep this screen so deep links opened outside that flow still resolve.
+// On web, the OAuth redirect lands here directly. On native, expo-web-browser
+// intercepts the URL before it renders, but we keep this screen so deep links
+// opened outside that flow still resolve.
 export default function AuthCallbackScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
   const { signIn } = useAuth();
@@ -22,8 +22,13 @@ export default function AuthCallbackScreen() {
   }, [token]);
 
   return (
-    <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <ThemedText>{t('auth.signingIn')}</ThemedText>
-    </ThemedView>
+    <View style={styles.root}>
+      <Text style={styles.text}>{t('auth.signingIn')}</Text>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: Palette.bg, alignItems: 'center', justifyContent: 'center' },
+  text: { color: Palette.muted, fontSize: 15, fontFamily: Font.sans },
+});

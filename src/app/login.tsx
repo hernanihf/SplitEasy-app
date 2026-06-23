@@ -1,13 +1,11 @@
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Font, Palette } from '@/constants/design';
 import { googleLoginUrl, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 
@@ -22,7 +20,6 @@ export default function LoginScreen() {
     try {
       const redirectUri = Linking.createURL('auth/callback');
       const result = await WebBrowser.openAuthSessionAsync(googleLoginUrl, redirectUri);
-
       if (result.type === 'success' && result.url) {
         const token = Linking.parse(result.url).queryParams?.token;
         if (typeof token === 'string') {
@@ -36,61 +33,110 @@ export default function LoginScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">SplitEasy</ThemedText>
-        <ThemedText type="default" style={styles.subtitle}>
-          {t('login.subtitle')}
-        </ThemedText>
+    <View style={styles.root}>
+      <View style={[styles.blob, styles.blobGreen]} />
+      <View style={[styles.blob, styles.blobBlue]} />
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.hero}>
+          <View style={styles.brandRow}>
+            <View style={styles.logo}>
+              <View style={styles.logoGreen} />
+              <View style={styles.logoSplit} />
+              <View style={styles.logoBlue} />
+            </View>
+            <Text style={styles.brand}>SplitEasy</Text>
+          </View>
+          <Text style={styles.h1}>
+            {t('login.tagline1')}
+            {'\n'}
+            {t('login.tagline2')}
+          </Text>
+          <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
+        </View>
 
-        <Pressable
-          onPress={handleGoogleLogin}
-          disabled={isSigningIn}
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
-          <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSigningIn ? t('login.connecting') : t('login.continueWithGoogle')}
-          </ThemedText>
-        </Pressable>
-
-        {Platform.OS === 'web' && (
-          <ThemedText type="small" style={styles.hint}>
-            {t('login.webHint')}
-          </ThemedText>
-        )}
+        <View style={styles.footer}>
+          <Pressable
+            onPress={handleGoogleLogin}
+            disabled={isSigningIn}
+            style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+            <View style={styles.gMark}>
+              <Text style={styles.gText}>G</Text>
+            </View>
+            <Text style={styles.buttonText}>
+              {isSigningIn ? t('login.connecting') : t('login.continueWithGoogle')}
+            </Text>
+          </Pressable>
+          <Text style={styles.terms}>{t('login.terms')}</Text>
+        </View>
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  root: { flex: 1, backgroundColor: Palette.bg, overflow: 'hidden' },
+  blob: { position: 'absolute', borderRadius: 999 },
+  blobGreen: {
+    width: 420,
+    height: 420,
+    backgroundColor: 'rgba(14,124,90,0.10)',
+    top: -150,
+    right: -170,
   },
-  safeArea: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingHorizontal: Spacing.four,
+  blobBlue: {
+    width: 380,
+    height: 380,
+    backgroundColor: 'rgba(47,111,237,0.09)',
+    bottom: -60,
+    left: -170,
   },
-  subtitle: {
-    textAlign: 'center',
+  safe: { flex: 1, paddingHorizontal: 28 },
+  hero: { flex: 1, justifyContent: 'center' },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 36 },
+  logo: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', flexDirection: 'row' },
+  logoGreen: { flex: 1, backgroundColor: Palette.green },
+  logoSplit: { width: 2, backgroundColor: Palette.bg },
+  logoBlue: { flex: 1, backgroundColor: Palette.blue },
+  brand: { fontSize: 25, fontFamily: Font.sansBold, letterSpacing: -0.5, color: Palette.ink },
+  h1: {
+    fontSize: 40,
+    lineHeight: 42,
+    fontFamily: Font.sansBold,
+    letterSpacing: -1.2,
+    color: Palette.ink,
+    marginBottom: 16,
   },
+  subtitle: { fontSize: 16, lineHeight: 24, color: Palette.muted2, maxWidth: 300 },
+  footer: { paddingBottom: 40 },
   button: {
-    backgroundColor: '#208AEF',
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.three,
-    marginTop: Spacing.four,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: '#E2E6E3',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
   },
-  buttonPressed: {
-    opacity: 0.8,
+  pressed: { opacity: 0.85 },
+  gMark: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#E2E6E3',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonText: {
-    color: '#fff',
-  },
-  hint: {
-    marginTop: Spacing.two,
-    opacity: 0.7,
+  gText: { fontFamily: Font.sansBold, fontSize: 13, color: '#4285F4' },
+  buttonText: { fontSize: 16, fontFamily: Font.sansSemibold, color: Palette.ink },
+  terms: {
+    textAlign: 'center',
+    fontSize: 12.5,
+    color: Palette.faint,
+    marginTop: 16,
+    lineHeight: 18,
   },
 });

@@ -1,17 +1,16 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, Platform, Pressable, Share, StyleSheet } from 'react-native';
+import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { Font, Palette, Radius, avatarColor, initial, tileBg } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
 
 export type Group = {
   id: number;
   name: string;
+  emoji: string;
   members: { id: number; name: string }[];
 };
 
@@ -20,13 +19,10 @@ type Expense = {
   description: string;
   amount: number;
   paid_by: { id: number; name: string };
+  splits: { user_id: number; amount: number }[];
 };
 
-type Debt = {
-  from_user_id: number;
-  to_user_id: number;
-  amount: number;
-};
+type Debt = { from_user_id: number; to_user_id: number; amount: number };
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,20 +31,47 @@ export default function GroupDetailScreen() {
   const [group, setGroup] = useState<Group | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [myId, setMyId] = useState<number | null>(null);
+  const [tab, setTab] = useState<'expenses' | 'balances'>('expenses');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      api.get<Group>(`/api/v1/groups/${id}`),
+      api.get<Expense[]>(`/api/v1/groups/${id}/expenses`),
+      api.get<Debt[]>(`/api/v1/groups/${id}/balances`),
+      api.get<{ id: number }>('/api/v1/users/me'),
+    ])
+      .then(([g, ex, d, me]) => {
+        setGroup(g);
+        setExpenses(ex ?? []);
+        setDebts(d ?? []);
+        setMyId(me.id);
+      })
+      .catch(() => setError(t('groupDetail.loadError')))
+      .finally(() => setLoading(false));
+  }, [id, api]);
+
+  useFocusEffect(load);
+
+  const memberName = useCallback(
+    (uid: number) =>
+      group?.members.find((m) => m.id === uid)?.name ?? t('groupDetail.userN', { id: uid }),
+    [group],
+  );
 
   const handleShare = useCallback(async () => {
     try {
-      const { url } = await api.get<{ token: string; url: string }>(
-        `/api/v1/groups/${id}/invite`,
-      );
+      const { url } = await api.get<{ url: string }>(`/api/v1/groups/${id}/invite`);
       if (Platform.OS === 'web') {
-        const nav = navigator as Navigator & { share?: (data: { title?: string; url: string }) => Promise<void> };
-        if (nav.share) {
-          await nav.share({ title: 'SplitEasy', url });
-        } else {
+        const nav = navigator as Navigator & { share?: (d: { url: string }) => Promise<void> };
+        if (nav.share) await nav.share({ url });
+        else {
           await navigator.clipboard.writeText(url);
           setShareMsg(t('groupDetail.linkCopied'));
         }
@@ -60,206 +83,332 @@ export default function GroupDetailScreen() {
     }
   }, [api, id]);
 
-  const memberName = useCallback(
-    (userID: number) =>
-      group?.members.find((m) => m.id === userID)?.name ?? t('groupDetail.userN', { id: userID }),
-    [group],
-  );
-
-  const loadGroup = useCallback(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError(null);
-
-    Promise.all([
-      api.get<Group>(`/api/v1/groups/${id}`),
-      api.get<Expense[]>(`/api/v1/groups/${id}/expenses`),
-      api.get<Debt[]>(`/api/v1/groups/${id}/balances`),
-    ])
-      .then(([groupData, expensesData, debtsData]) => {
-        setGroup(groupData);
-        setExpenses(expensesData ?? []);
-        setDebts(debtsData ?? []);
-      })
-      .catch(() => setError(t('groupDetail.loadError')))
-      .finally(() => setIsLoading(false));
-  }, [id, api]);
-
-  useFocusEffect(loadGroup);
-
-  if (isLoading) {
+  if (loading && !group) {
     return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <ThemedText type="default">{t('groupDetail.loading')}</ThemedText>
+      <View style={styles.root}>
+        <SafeAreaView edges={['top']} style={styles.center}>
+          <Text style={styles.muted}>{t('groupDetail.loading')}</Text>
         </SafeAreaView>
-      </ThemedView>
+      </View>
     );
   }
-
   if (error || !group) {
     return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <ThemedText type="default">{error ?? t('groupDetail.notFound')}</ThemedText>
+      <View style={styles.root}>
+        <SafeAreaView edges={['top']} style={styles.center}>
+          <Text style={styles.muted}>{error ?? t('groupDetail.notFound')}</Text>
         </SafeAreaView>
-      </ThemedView>
+      </View>
     );
   }
 
+  // My net in this group, derived from simplified debts.
+  let myNet = 0;
+  for (const d of debts) {
+    if (d.to_user_id === myId) myNet += d.amount;
+    if (d.from_user_id === myId) myNet -= d.amount;
+  }
+  const owed = myNet > 0.01;
+  const owe = myNet < -0.01;
+  const summaryColor = owed ? Palette.green : owe ? Palette.red : Palette.muted;
+  const summaryWord = owed
+    ? t('groupDetail.wordOwed')
+    : owe
+      ? t('groupDetail.wordOwe')
+      : t('groupDetail.wordSettled');
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.header}>
-          <ThemedText type="title">{group.name}</ThemedText>
-          <ThemedView style={styles.headerActions}>
+    <View style={styles.root}>
+      <SafeAreaView edges={['top']} style={styles.safe}>
+        {/* top bar */}
+        <View style={styles.topbar}>
+          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
+            <Text style={styles.back}>‹</Text>
+          </Pressable>
+          <View style={styles.topActions}>
+            <Pressable onPress={handleShare} style={styles.iconBtn}>
+              <Text style={styles.shareGlyph}>🔗</Text>
+            </Pressable>
+            <Pressable onPress={() => setTab('balances')} style={styles.settlePill}>
+              <Text style={styles.settlePillText}>{t('groupDetail.settleUp')}</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {/* group header */}
+          <View style={styles.groupHead}>
+            <View style={[styles.tile, { backgroundColor: tileBg(group.id) }]}>
+              <Text style={styles.tileEmoji}>{group.emoji || '💸'}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.groupName}>{group.name}</Text>
+              <Text style={styles.groupMeta}>
+                {t('groupDetail.memberCount', { count: group.members.length })}
+              </Text>
+            </View>
+          </View>
+
+          {/* balance summary */}
+          <View
+            style={[
+              styles.summary,
+              {
+                backgroundColor: owe ? '#FBEEEC' : owed ? Palette.greenTint : Palette.card,
+                borderColor: owe ? '#F0D6D2' : owed ? Palette.greenTintBorder : Palette.cardBorder,
+              },
+            ]}>
+            <Text style={styles.summaryLabel}>{t('groupDetail.yourBalance')}</Text>
+            <Text style={[styles.summaryAmount, { color: summaryColor }]}>
+              {formatAmount(Math.abs(myNet))}
+            </Text>
+            <Text style={[styles.summaryWord, { color: summaryColor }]}>{summaryWord}</Text>
+          </View>
+
+          {/* tabs */}
+          <View style={styles.tabs}>
             <Pressable
-              onPress={() => router.push(`/groups/${id}/scan-receipt`)}
-              style={[styles.newButton, styles.scanButton]}>
-              <ThemedText type="smallBold" style={styles.newButtonText}>
-                {t('groupDetail.receipt')}
-              </ThemedText>
+              onPress={() => setTab('expenses')}
+              style={[styles.tab, tab === 'expenses' && styles.tabActive]}>
+              <Text style={[styles.tabText, tab === 'expenses' && styles.tabTextActive]}>
+                {t('groupDetail.expenses')}
+              </Text>
             </Pressable>
             <Pressable
-              onPress={() => router.push(`/groups/${id}/add-expense`)}
-              style={styles.newButton}>
-              <ThemedText type="smallBold" style={styles.newButtonText}>
-                {t('groupDetail.expense')}
-              </ThemedText>
+              onPress={() => setTab('balances')}
+              style={[styles.tab, tab === 'balances' && styles.tabActive]}>
+              <Text style={[styles.tabText, tab === 'balances' && styles.tabTextActive]}>
+                {t('groupDetail.balances')}
+              </Text>
             </Pressable>
-          </ThemedView>
-        </ThemedView>
+          </View>
 
-        <Pressable onPress={handleShare} style={styles.inviteButton}>
-          <ThemedText type="smallBold" style={styles.inviteText}>
-            🔗 {t('groupDetail.invite')}
-          </ThemedText>
-        </Pressable>
-        {shareMsg && (
-          <ThemedText type="small" style={styles.shareMsg}>
-            {shareMsg}
-          </ThemedText>
-        )}
-
-        <ThemedText type="subtitle">{t('groupDetail.balances')}</ThemedText>
-        {debts.length === 0 ? (
-          <ThemedText type="default">{t('groupDetail.allSettled')}</ThemedText>
-        ) : (
-          debts.map((debt, index) => (
-            <Pressable
-              key={index}
-              onPress={() =>
-                router.push({
-                  pathname: '/groups/[id]/settle',
-                  params: {
-                    id: id as string,
-                    from: String(debt.from_user_id),
-                    to: String(debt.to_user_id),
-                    amount: String(debt.amount),
-                    fromName: memberName(debt.from_user_id),
-                    toName: memberName(debt.to_user_id),
-                  },
-                })
-              }>
-              <ThemedView type="backgroundElement" style={styles.debtRow}>
-                <ThemedText type="default">
-                  {t('groupDetail.owes', {
-                    from: memberName(debt.from_user_id),
-                    to: memberName(debt.to_user_id),
-                    amount: formatAmount(debt.amount),
-                  })}
-                </ThemedText>
-                <ThemedText type="smallBold" style={styles.settleHint}>
-                  {t('groupDetail.settle')}
-                </ThemedText>
-              </ThemedView>
-            </Pressable>
-          ))
-        )}
-
-        <ThemedText type="subtitle">{t('groupDetail.expenses')}</ThemedText>
-        <FlatList
-          data={expenses}
-          keyExtractor={(expense) => String(expense.id)}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={<ThemedText type="default">{t('groupDetail.noExpenses')}</ThemedText>}
-          renderItem={({ item }) => (
-            <ThemedView type="backgroundElement" style={styles.row}>
-              <ThemedText type="default">{item.description}</ThemedText>
-              <ThemedText type="small">
-                {t('groupDetail.paidBy', {
-                  name: item.paid_by.name,
-                  amount: formatAmount(item.amount),
-                })}
-              </ThemedText>
-            </ThemedView>
+          {tab === 'expenses' && (
+            <View style={styles.list}>
+              {expenses.length === 0 && <Text style={styles.muted}>{t('groupDetail.allSettledHint')}</Text>}
+              {expenses.map((ex) => {
+                const myShare = ex.splits?.find((s) => s.user_id === myId)?.amount;
+                return (
+                  <View key={ex.id} style={styles.expenseCard}>
+                    <View
+                      style={[styles.smallAvatar, { backgroundColor: avatarColor(ex.paid_by.id) }]}>
+                      <Text style={styles.smallAvatarText}>{initial(ex.paid_by.name)}</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.expenseDesc} numberOfLines={1}>
+                        {ex.description}
+                      </Text>
+                      <Text style={styles.expenseMeta}>
+                        {t('groupDetail.paidBy', { name: ex.paid_by.name })}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={styles.expenseAmount}>{formatAmount(ex.amount)}</Text>
+                      {myShare != null && (
+                        <Text style={styles.expenseShare}>
+                          {t('groupDetail.yourShare', { amount: formatAmount(myShare) })}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           )}
-        />
+
+          {tab === 'balances' && (
+            <View style={styles.list}>
+              {debts.length === 0 ? (
+                <View style={styles.settledCard}>
+                  <View style={styles.settledCheck}>
+                    <Text style={styles.settledCheckText}>✓</Text>
+                  </View>
+                  <Text style={styles.settledTitle}>{t('groupDetail.allSettled')}</Text>
+                  <Text style={styles.settledHint}>{t('groupDetail.allSettledHint')}</Text>
+                </View>
+              ) : (
+                debts.map((d, i) => (
+                  <View key={i} style={styles.balanceCard}>
+                    <View
+                      style={[styles.smallAvatar, { backgroundColor: avatarColor(d.from_user_id) }]}>
+                      <Text style={styles.smallAvatarText}>{initial(memberName(d.from_user_id))}</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.balanceText}>
+                        {t('groupDetail.owes', {
+                          from: memberName(d.from_user_id),
+                          to: memberName(d.to_user_id),
+                        })}
+                      </Text>
+                      <Text style={styles.balanceAmount}>{formatAmount(d.amount)}</Text>
+                    </View>
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/groups/[id]/settle',
+                          params: {
+                            id: id as string,
+                            from: String(d.from_user_id),
+                            to: String(d.to_user_id),
+                            amount: String(d.amount),
+                            fromName: memberName(d.from_user_id),
+                            toName: memberName(d.to_user_id),
+                          },
+                        })
+                      }
+                      style={styles.settleBtn}>
+                      <Text style={styles.settleBtnText}>{t('groupDetail.settle')}</Text>
+                    </Pressable>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+        </ScrollView>
+
+        {/* FAB */}
+        <View style={styles.fabWrap}>
+          <Pressable
+            onPress={() => router.push(`/groups/${id}/add-expense`)}
+            style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
+            <Text style={styles.fabPlus}>+</Text>
+            <Text style={styles.fabText}>{t('groupDetail.addExpense')}</Text>
+          </Pressable>
+        </View>
+
+        {shareMsg && (
+          <View style={styles.toast}>
+            <Text style={styles.toastText}>{shareMsg}</Text>
+          </View>
+        )}
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  root: { flex: 1, backgroundColor: Palette.bg },
+  safe: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  muted: { color: Palette.muted, fontSize: 14, fontFamily: Font.sans },
+  topbar: {
+    paddingHorizontal: 18,
+    paddingTop: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  safeArea: {
+  topActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  back: { fontSize: 22, color: Palette.ink, lineHeight: 24 },
+  shareGlyph: { fontSize: 15 },
+  settlePill: { backgroundColor: Palette.greenTint, borderRadius: 11, paddingVertical: 9, paddingHorizontal: 14 },
+  settlePillText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.green },
+  scroll: { paddingTop: 14, paddingBottom: 110 },
+  groupHead: { paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', gap: 13 },
+  tile: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  tileEmoji: { fontSize: 24 },
+  groupName: { fontSize: 22, fontFamily: Font.sansBold, letterSpacing: -0.5, color: Palette.ink },
+  groupMeta: { marginTop: 3, fontSize: 12.5, color: Palette.muted },
+  summary: { marginHorizontal: 24, marginTop: 18, borderRadius: Radius.lg, borderWidth: 1, padding: 16 },
+  summaryLabel: { fontSize: 12.5, color: Palette.muted3, fontFamily: Font.sansMedium },
+  summaryAmount: { marginTop: 5, fontSize: 24, fontFamily: Font.monoSemibold, letterSpacing: -0.5 },
+  summaryWord: { marginTop: 4, fontSize: 12.5, opacity: 0.9 },
+  tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 24, paddingTop: 18 },
+  tab: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.five,
-    gap: Spacing.three,
-    maxWidth: MaxContentWidth,
+    height: 38,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    backgroundColor: Palette.card,
+  },
+  tabActive: { backgroundColor: Palette.ink, borderColor: Palette.ink },
+  tabText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.muted3 },
+  tabTextActive: { color: '#fff' },
+  list: { paddingHorizontal: 20, paddingTop: 16, gap: 9 },
+  expenseCard: {
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    borderRadius: 16,
+    padding: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+  },
+  smallAvatar: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  smallAvatarText: { color: '#fff', fontFamily: Font.sansSemibold, fontSize: 15 },
+  expenseDesc: { fontSize: 14.5, fontFamily: Font.sansSemibold, color: Palette.ink },
+  expenseMeta: { marginTop: 3, fontSize: 12, color: Palette.muted },
+  expenseAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink },
+  expenseShare: { marginTop: 3, fontSize: 11, color: Palette.muted },
+  balanceCard: {
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+  },
+  balanceText: { fontSize: 13.5, color: Palette.ink, fontFamily: Font.sans },
+  balanceAmount: { marginTop: 3, fontSize: 13.5, fontFamily: Font.monoSemibold, color: Palette.ink },
+  settleBtn: { backgroundColor: Palette.greenTint, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 13 },
+  settleBtnText: { fontSize: 12.5, fontFamily: Font.sansSemibold, color: Palette.green },
+  settledCard: {
+    backgroundColor: Palette.greenTint,
+    borderWidth: 1,
+    borderColor: Palette.greenTintBorder,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+  },
+  settledCheck: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: Palette.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  settledCheckText: { color: '#fff', fontSize: 22 },
+  settledTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.greenDark },
+  settledHint: { marginTop: 4, fontSize: 12.5, color: '#4f7c69' },
+  fabWrap: { position: 'absolute', bottom: 26, left: 0, right: 0, alignItems: 'center' },
+  fab: {
+    height: 54,
+    paddingHorizontal: 26,
+    borderRadius: Radius.lg,
+    backgroundColor: Palette.ink,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  pressed: { opacity: 0.85 },
+  fabPlus: { color: '#fff', fontSize: 20, lineHeight: 22 },
+  fabText: { color: '#fff', fontSize: 15, fontFamily: Font.sansSemibold },
+  toast: {
+    position: 'absolute',
+    bottom: 96,
     alignSelf: 'center',
-    width: '100%',
+    backgroundColor: Palette.ink,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 14,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  inviteButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: Spacing.two,
-  },
-  inviteText: {
-    color: '#1FA971',
-  },
-  shareMsg: {
-    opacity: 0.8,
-  },
-  newButton: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
-    backgroundColor: '#208AEF',
-  },
-  scanButton: {
-    backgroundColor: '#5B8DEF',
-  },
-  newButtonText: {
-    color: '#fff',
-  },
-  list: {
-    gap: Spacing.two,
-  },
-  row: {
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
-  debtRow: {
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  settleHint: {
-    color: '#1FA971',
-  },
+  toastText: { color: '#fff', fontSize: 13.5, fontFamily: Font.sansMedium },
 });

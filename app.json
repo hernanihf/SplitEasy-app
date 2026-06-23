@@ -54,7 +54,8 @@
           "cameraPermission": "SplitEasy necesita la cámara para escanear tickets."
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,

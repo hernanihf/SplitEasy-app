@@ -1,282 +1,433 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Font, Palette, Radius, avatarColor, initial } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
 import type { Group } from '@/app/groups/[id]/index';
 
-type SplitMethod = 'equal' | 'percentage' | 'fixed' | 'shares';
+type SplitMethod = 'equal' | 'fixed' | 'percentage';
 
-const SPLIT_METHODS: { value: SplitMethod; labelKey: string }[] = [
-  { value: 'equal', labelKey: 'addExpense.methodEqual' },
-  { value: 'percentage', labelKey: 'addExpense.methodPercentage' },
-  { value: 'fixed', labelKey: 'addExpense.methodFixed' },
-  { value: 'shares', labelKey: 'addExpense.methodShares' },
+const METHODS: { value: SplitMethod; key: string }[] = [
+  { value: 'equal', key: 'addExpense.methodEqual' },
+  { value: 'fixed', key: 'addExpense.methodFixed' },
+  { value: 'percentage', key: 'addExpense.methodPercentage' },
 ];
 
 export default function AddExpenseScreen() {
-  const { id, description: prefillDescription, amount: prefillAmount } = useLocalSearchParams<{
+  const { id, description: prefillDesc, amount: prefillAmount } = useLocalSearchParams<{
     id: string;
     description?: string;
     amount?: string;
   }>();
   const { api } = useAuth();
-  const theme = useTheme();
 
   const [group, setGroup] = useState<Group | null>(null);
-  const [description, setDescription] = useState(prefillDescription ?? '');
+  const [desc, setDesc] = useState(prefillDesc ?? '');
   const [amount, setAmount] = useState(prefillAmount ?? '');
-  const [paidByID, setPaidByID] = useState<number | null>(null);
-  const [splitMethod, setSplitMethod] = useState<SplitMethod>('equal');
-  const [included, setIncluded] = useState<Record<number, boolean>>({});
+  const [paidBy, setPaidBy] = useState<number | null>(null);
+  const [method, setMethod] = useState<SplitMethod>('equal');
   const [values, setValues] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const scanned = !!(prefillDesc || prefillAmount);
 
   useEffect(() => {
     if (!id) return;
-    api.get<Group>(`/api/v1/groups/${id}`).then((data) => {
-      setGroup(data);
-      setPaidByID(data.members[0]?.id ?? null);
-      setIncluded(Object.fromEntries(data.members.map((m) => [m.id, true])));
+    Promise.all([
+      api.get<Group>(`/api/v1/groups/${id}`),
+      api.get<{ id: number }>('/api/v1/users/me'),
+    ]).then(([g, me]) => {
+      setGroup(g);
+      setPaidBy(g.members.some((m) => m.id === me.id) ? me.id : (g.members[0]?.id ?? null));
     });
   }, [id, api]);
 
-  const amountNumber = useMemo(() => parseFloat(amount.replace(',', '.')), [amount]);
+  const amountNumber = useMemo(() => parseFloat(amount.replace(',', '.')) || 0, [amount]);
 
-  const handleSubmit = async () => {
-    if (!group || !paidByID) return;
-    if (!description.trim()) {
-      setError(t('addExpense.descriptionRequired'));
-      return;
-    }
-    if (!amountNumber || amountNumber <= 0) {
-      setError(t('addExpense.amountPositive'));
-      return;
-    }
+  const splitTotal = useMemo(() => {
+    if (!group || method === 'equal') return 0;
+    return group.members.reduce(
+      (sum, m) => sum + (parseFloat((values[m.id] ?? '').replace(',', '.')) || 0),
+      0,
+    );
+  }, [group, method, values]);
 
-    const memberIDs = group.members.map((m) => m.id);
+  const submit = async () => {
+    if (!group || !paidBy) return;
+    if (!desc.trim()) return setError(t('addExpense.descriptionRequired'));
+    if (amountNumber <= 0) return setError(t('addExpense.amountPositive'));
+
     let splits: { user_id: number; value: number }[];
-
-    if (splitMethod === 'equal') {
-      splits = memberIDs.filter((memberID) => included[memberID]).map((memberID) => ({ user_id: memberID, value: 0 }));
-      if (splits.length === 0) {
-        setError(t('addExpense.pickMember'));
-        return;
-      }
+    if (method === 'equal') {
+      splits = group.members.map((m) => ({ user_id: m.id, value: 0 }));
     } else {
-      splits = memberIDs
-        .filter((memberID) => included[memberID])
-        .map((memberID) => ({ user_id: memberID, value: parseFloat((values[memberID] ?? '').replace(',', '.')) || 0 }));
-
-      if (splits.length === 0) {
-        setError(t('addExpense.pickMember'));
-        return;
-      }
-      if (splitMethod === 'percentage') {
-        const total = splits.reduce((sum, s) => sum + s.value, 0);
-        if (Math.abs(total - 100) > 0.01) {
-          setError(t('addExpense.percentagesMustTotal', { total }));
-          return;
-        }
-      }
-      if (splitMethod === 'fixed') {
-        const total = splits.reduce((sum, s) => sum + s.value, 0);
-        if (Math.abs(total - amountNumber) > 0.01) {
-          setError(
-            t('addExpense.amountsMustTotal', {
-              total: formatAmount(total),
-              amount: formatAmount(amountNumber),
-            }),
-          );
-          return;
-        }
-      }
+      splits = group.members.map((m) => ({
+        user_id: m.id,
+        value: parseFloat((values[m.id] ?? '').replace(',', '.')) || 0,
+      }));
+      if (method === 'percentage' && Math.abs(splitTotal - 100) > 0.01)
+        return setError(t('addExpense.percentagesMustTotal'));
+      if (method === 'fixed' && Math.abs(splitTotal - amountNumber) > 0.01)
+        return setError(t('addExpense.amountsMustTotal', { amount: formatAmount(amountNumber) }));
     }
 
-    setIsSubmitting(true);
+    setSubmitting(true);
     setError(null);
     try {
       await api.post('/api/v1/expenses', {
         group_id: group.id,
-        paid_by_id: paidByID,
-        description: description.trim(),
+        paid_by_id: paidBy,
+        description: desc.trim(),
         amount: amountNumber,
-        split_method: splitMethod,
+        split_method: method,
         splits,
       });
-      router.back();
+      router.replace(`/groups/${id}`);
     } catch {
       setError(t('addExpense.addError'));
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
   if (!group) {
     return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <ThemedText type="default">{t('addExpense.loading')}</ThemedText>
+      <View style={styles.root}>
+        <SafeAreaView edges={['top']} style={styles.center}>
+          <Text style={styles.muted}>{t('addExpense.loading')}</Text>
         </SafeAreaView>
-      </ThemedView>
+      </View>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">{t('addExpense.title')}</ThemedText>
+    <View style={styles.root}>
+      <SafeAreaView edges={['top']} style={styles.safe}>
+        <View style={styles.topbar}>
+          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
+            <Text style={styles.back}>‹</Text>
+          </Pressable>
+          <Text style={styles.topTitle}>{t('addExpense.title')}</Text>
+          <View style={{ width: 38 }} />
+        </View>
 
-        <TextInput
-          value={description}
-          onChangeText={setDescription}
-          placeholder={t('addExpense.descriptionPlaceholder')}
-          placeholderTextColor={theme.textSecondary}
-          style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-        />
-
-        <TextInput
-          value={amount}
-          onChangeText={setAmount}
-          placeholder={t('addExpense.amountPlaceholder')}
-          placeholderTextColor={theme.textSecondary}
-          keyboardType="decimal-pad"
-          style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-        />
-
-        <ThemedText type="smallBold">{t('addExpense.whoPaid')}</ThemedText>
-        <ThemedView style={styles.chipRow}>
-          {group.members.map((member) => (
-            <Pressable key={member.id} onPress={() => setPaidByID(member.id)}>
-              <ThemedView
-                type={paidByID === member.id ? 'backgroundSelected' : 'backgroundElement'}
-                style={styles.chip}>
-                <ThemedText type="small">{member.name}</ThemedText>
-              </ThemedView>
-            </Pressable>
-          ))}
-        </ThemedView>
-
-        <ThemedText type="smallBold">{t('addExpense.howSplit')}</ThemedText>
-        <ThemedView style={styles.chipRow}>
-          {SPLIT_METHODS.map((method) => (
-            <Pressable key={method.value} onPress={() => setSplitMethod(method.value)}>
-              <ThemedView
-                type={splitMethod === method.value ? 'backgroundSelected' : 'backgroundElement'}
-                style={styles.chip}>
-                <ThemedText type="small">{t(method.labelKey)}</ThemedText>
-              </ThemedView>
-            </Pressable>
-          ))}
-        </ThemedView>
-
-        {group.members.map((member) => (
-          <ThemedView key={member.id} style={styles.memberRow}>
-            <Pressable
-              onPress={() => setIncluded((prev) => ({ ...prev, [member.id]: !prev[member.id] }))}
-              style={styles.memberToggle}>
-              <ThemedText type="default">
-                {included[member.id] ? '☑' : '☐'} {member.name}
-              </ThemedText>
-            </Pressable>
-
-            {splitMethod !== 'equal' && included[member.id] && (
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          {/* amount */}
+          <View style={styles.amountWrap}>
+            <Text style={styles.amountLabel}>{t('addExpense.amountIn', { group: group.name })}</Text>
+            <View style={styles.amountRow}>
+              <Text style={styles.dollar}>$</Text>
               <TextInput
-                value={values[member.id] ?? ''}
-                onChangeText={(text) => setValues((prev) => ({ ...prev, [member.id]: text }))}
-                placeholder={
-                  splitMethod === 'percentage'
-                    ? '%'
-                    : splitMethod === 'fixed'
-                      ? '$'
-                      : t('addExpense.unitsPlaceholder')
-                }
-                placeholderTextColor={theme.textSecondary}
+                value={amount}
+                onChangeText={setAmount}
                 keyboardType="decimal-pad"
-                style={[styles.valueInput, { color: theme.text, borderColor: theme.backgroundSelected }]}
+                placeholder="0"
+                placeholderTextColor="#C8D0CB"
+                style={styles.amountInput}
               />
+            </View>
+          </View>
+
+          {/* receipt scan */}
+          <View style={styles.card}>
+            {scanned ? (
+              <View style={styles.scannedRow}>
+                <View style={styles.scannedIcon}>
+                  <Text style={styles.scannedCheck}>✓</Text>
+                </View>
+                <Text style={styles.scannedText}>{t('addExpense.receiptAdded')}</Text>
+              </View>
+            ) : (
+              <View style={styles.scanRow}>
+                <Pressable
+                  onPress={() => router.push(`/groups/${id}/scan-receipt`)}
+                  style={styles.scanBtn}>
+                  <Text style={styles.scanBtnText}>{t('addExpense.scan')}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push(`/groups/${id}/scan-receipt`)}
+                  style={styles.scanBtn}>
+                  <Text style={styles.scanBtnText}>{t('addExpense.upload')}</Text>
+                </Pressable>
+              </View>
             )}
-          </ThemedView>
-        ))}
+          </View>
 
-        {error && <ThemedText type="small">{error}</ThemedText>}
+          {/* description */}
+          <View style={styles.inputCard}>
+            <TextInput
+              value={desc}
+              onChangeText={setDesc}
+              placeholder={t('addExpense.descriptionPlaceholder')}
+              placeholderTextColor={Palette.muted}
+              style={styles.descInput}
+            />
+          </View>
 
-        <Pressable
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
-          <ThemedText type="smallBold" style={styles.buttonText}>
-            {isSubmitting ? t('addExpense.saving') : t('addExpense.add')}
-          </ThemedText>
-        </Pressable>
+          {/* who paid */}
+          <Text style={styles.sectionLabel}>{t('addExpense.whoPaid')}</Text>
+          <View style={styles.chipWrap}>
+            {group.members.map((m) => {
+              const active = paidBy === m.id;
+              return (
+                <Pressable
+                  key={m.id}
+                  onPress={() => setPaidBy(m.id)}
+                  style={[styles.chip, active && styles.chipActive]}>
+                  <View style={[styles.chipAvatar, { backgroundColor: avatarColor(m.id) }]}>
+                    <Text style={styles.chipAvatarText}>{initial(m.name)}</Text>
+                  </View>
+                  <Text style={[styles.chipName, active && styles.chipNameActive]}>{m.name}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* split mode */}
+          <Text style={styles.sectionLabel}>{t('addExpense.howSplit')}</Text>
+          <View style={styles.segment}>
+            {METHODS.map((mth) => {
+              const active = method === mth.value;
+              return (
+                <Pressable
+                  key={mth.value}
+                  onPress={() => setMethod(mth.value)}
+                  style={[styles.segmentBtn, active && styles.segmentBtnActive]}>
+                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                    {t(mth.key)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* split rows */}
+          <View style={styles.splitCard}>
+            {group.members.map((m) => {
+              const equalShare = group.members.length ? amountNumber / group.members.length : 0;
+              return (
+                <View key={m.id} style={styles.splitRow}>
+                  <View style={[styles.rowAvatar, { backgroundColor: avatarColor(m.id) }]}>
+                    <Text style={styles.rowAvatarText}>{initial(m.name)}</Text>
+                  </View>
+                  <Text style={styles.rowName}>{m.name}</Text>
+                  {method === 'equal' ? (
+                    <Text style={styles.rowDisplay}>{formatAmount(equalShare)}</Text>
+                  ) : (
+                    <View style={styles.rowInputBox}>
+                      {method === 'fixed' && <Text style={styles.rowPrefix}>$</Text>}
+                      <TextInput
+                        value={values[m.id] ?? ''}
+                        onChangeText={(txt) => setValues((p) => ({ ...p, [m.id]: txt }))}
+                        keyboardType="decimal-pad"
+                        placeholder="0"
+                        placeholderTextColor={Palette.muted}
+                        style={styles.rowInput}
+                      />
+                      {method === 'percentage' && <Text style={styles.rowSuffix}>%</Text>}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+            {method !== 'equal' && (
+              <View style={styles.splitHint}>
+                <Text style={styles.splitHintLabel}>{t('addExpense.splitTotal')}</Text>
+                <Text style={styles.splitHintValue}>
+                  {method === 'percentage' ? `${splitTotal}%` : formatAmount(splitTotal)}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {error && <Text style={styles.error}>{error}</Text>}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Pressable
+            onPress={submit}
+            disabled={submitting}
+            style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}>
+            <Text style={styles.saveText}>
+              {submitting ? t('addExpense.saving') : t('addExpense.add')}
+            </Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.five,
-    gap: Spacing.three,
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-    fontSize: 16,
-  },
-  chipRow: {
+  root: { flex: 1, backgroundColor: Palette.bg },
+  safe: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  muted: { color: Palette.muted, fontSize: 14 },
+  topbar: {
+    paddingHorizontal: 18,
+    paddingTop: 2,
+    paddingBottom: 6,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  back: { fontSize: 22, color: Palette.ink, lineHeight: 24 },
+  topTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
+  scroll: { paddingHorizontal: 20, paddingBottom: 24 },
+  amountWrap: { alignItems: 'center', paddingVertical: 14 },
+  amountLabel: { fontSize: 12.5, color: Palette.muted, fontFamily: Font.sansMedium, marginBottom: 6 },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dollar: { fontFamily: Font.monoSemibold, fontSize: 30, color: Palette.ink },
+  amountInput: {
+    minWidth: 120,
+    fontFamily: Font.monoSemibold,
+    fontSize: 44,
+    letterSpacing: -1.5,
+    color: Palette.ink,
+    textAlign: 'center',
+    padding: 0,
+  },
+  card: {
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    borderRadius: Radius.lg,
+    padding: 14,
+    marginBottom: 14,
+  },
+  scanRow: { flexDirection: 'row', gap: 10 },
+  scanBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 13,
+    backgroundColor: Palette.inputBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanBtnText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.ink },
+  scannedRow: { flexDirection: 'row', alignItems: 'center', gap: 13 },
+  scannedIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 11,
+    backgroundColor: Palette.greenTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scannedCheck: { color: Palette.green, fontSize: 18 },
+  scannedText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.ink },
+  inputCard: {
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    borderRadius: Radius.md,
+    paddingHorizontal: 14,
+    marginBottom: 18,
+  },
+  descInput: { height: 48, fontSize: 15, color: Palette.ink, fontFamily: Font.sans },
+  sectionLabel: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink, marginBottom: 9, marginLeft: 4 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
   chip: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.four,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 7,
+    paddingRight: 13,
+    paddingLeft: 7,
+    borderRadius: Radius.pill,
+    backgroundColor: Palette.card,
+    borderWidth: 1.5,
+    borderColor: Palette.cardBorder,
   },
-  memberRow: {
+  chipActive: { backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
+  chipAvatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  chipAvatarText: { color: '#fff', fontSize: 11, fontFamily: Font.sansSemibold },
+  chipName: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.muted2 },
+  chipNameActive: { color: Palette.ink },
+  segment: { flexDirection: 'row', backgroundColor: '#EEF1EF', borderRadius: 13, padding: 4, marginBottom: 14 },
+  segmentBtn: { flex: 1, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  segmentBtnActive: { backgroundColor: Palette.card },
+  segmentText: { fontSize: 12.5, fontFamily: Font.sansSemibold, color: Palette.muted3 },
+  segmentTextActive: { color: Palette.ink },
+  splitCard: {
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  splitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Palette.divider,
+  },
+  rowAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  rowAvatarText: { color: '#fff', fontSize: 13, fontFamily: Font.sansSemibold },
+  rowName: { flex: 1, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
+  rowDisplay: { fontFamily: Font.monoSemibold, fontSize: 14, color: Palette.ink },
+  rowInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: Palette.inputBg,
+    borderRadius: 9,
+    paddingHorizontal: 10,
+    height: 36,
+  },
+  rowPrefix: { fontSize: 13, color: Palette.muted },
+  rowSuffix: { fontSize: 13, color: Palette.muted },
+  rowInput: {
+    width: 64,
+    textAlign: 'right',
+    fontFamily: Font.monoSemibold,
+    fontSize: 14,
+    color: Palette.ink,
+    padding: 0,
+  },
+  splitHint: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    backgroundColor: '#FAFBFA',
   },
-  memberToggle: {
-    flex: 1,
+  splitHintLabel: { fontSize: 12.5, fontFamily: Font.sansSemibold, color: Palette.muted3 },
+  splitHintValue: { fontFamily: Font.monoSemibold, fontSize: 13, color: Palette.ink },
+  error: { color: Palette.red, fontSize: 13, marginTop: 12, marginLeft: 4 },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 26,
+    borderTopWidth: 1,
+    borderTopColor: Palette.cardBorder,
+    backgroundColor: Palette.bg,
   },
-  valueInput: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-    width: 90,
-    textAlign: 'right',
+  saveBtn: {
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: Palette.green,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  button: {
-    backgroundColor: '#208AEF',
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.three,
-  },
-  buttonPressed: {
-    opacity: 0.8,
-  },
-  buttonText: {
-    color: '#fff',
-  },
+  saveBtnDisabled: { opacity: 0.6 },
+  saveText: { color: '#fff', fontSize: 15.5, fontFamily: Font.sansSemibold },
 });
