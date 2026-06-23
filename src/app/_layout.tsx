@@ -12,10 +12,14 @@ import {
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Palette } from '@/constants/design';
 import { AuthProvider, useAuth } from '@/lib/auth';
+
+// Max content width: the app is mobile-first, so on wide (web/desktop)
+// viewports we centre it in a phone-sized column instead of stretching.
+const MAX_WIDTH = 480;
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { token, isLoading } = useAuth();
@@ -57,9 +61,18 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <AuthGate>
-        <Slot />
-      </AuthGate>
+      <View style={styles.canvas}>
+        <View style={styles.column}>
+          <AuthGate>
+            <Slot />
+          </AuthGate>
+        </View>
+      </View>
     </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  canvas: { flex: 1, backgroundColor: '#E7E5DF', alignItems: 'center' },
+  column: { flex: 1, width: '100%', maxWidth: MAX_WIDTH, backgroundColor: Palette.bg, overflow: 'hidden' },
+});
