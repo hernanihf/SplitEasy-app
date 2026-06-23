@@ -40,6 +40,13 @@ const translations = {
       expenses: 'Expenses',
       noExpenses: 'No expenses yet.',
       paidBy: 'Paid by %{name} · %{amount}',
+      invite: 'Invite friends',
+      linkCopied: 'Invite link copied!',
+      shareError: "Couldn't get the invite link.",
+    },
+    join: {
+      joining: 'Joining the group…',
+      error: 'This invite link is invalid or has expired.',
     },
     settle: {
       amountPositive: 'The amount must be greater than 0.',
@@ -131,6 +138,13 @@ const translations = {
       expenses: 'Gastos',
       noExpenses: 'Todavía no hay gastos.',
       paidBy: 'Pagó %{name} · %{amount}',
+      invite: 'Invitar amigos',
+      linkCopied: '¡Link de invitación copiado!',
+      shareError: 'No se pudo obtener el link de invitación.',
+    },
+    join: {
+      joining: 'Uniéndote al grupo…',
+      error: 'Este link de invitación no es válido o expiró.',
     },
     settle: {
       amountPositive: 'El monto tiene que ser mayor a 0.',

@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet } from 'react-native';
+import { FlatList, Platform, Pressable, Share, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -37,6 +37,28 @@ export default function GroupDetailScreen() {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
+
+  const handleShare = useCallback(async () => {
+    try {
+      const { url } = await api.get<{ token: string; url: string }>(
+        `/api/v1/groups/${id}/invite`,
+      );
+      if (Platform.OS === 'web') {
+        const nav = navigator as Navigator & { share?: (data: { title?: string; url: string }) => Promise<void> };
+        if (nav.share) {
+          await nav.share({ title: 'SplitEasy', url });
+        } else {
+          await navigator.clipboard.writeText(url);
+          setShareMsg(t('groupDetail.linkCopied'));
+        }
+      } else {
+        await Share.share({ message: url });
+      }
+    } catch {
+      setShareMsg(t('groupDetail.shareError'));
+    }
+  }, [api, id]);
 
   const memberName = useCallback(
     (userID: number) =>
@@ -107,6 +129,17 @@ export default function GroupDetailScreen() {
             </Pressable>
           </ThemedView>
         </ThemedView>
+
+        <Pressable onPress={handleShare} style={styles.inviteButton}>
+          <ThemedText type="smallBold" style={styles.inviteText}>
+            🔗 {t('groupDetail.invite')}
+          </ThemedText>
+        </Pressable>
+        {shareMsg && (
+          <ThemedText type="small" style={styles.shareMsg}>
+            {shareMsg}
+          </ThemedText>
+        )}
 
         <ThemedText type="subtitle">{t('groupDetail.balances')}</ThemedText>
         {debts.length === 0 ? (
@@ -188,6 +221,16 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: Spacing.two,
+  },
+  inviteButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: Spacing.two,
+  },
+  inviteText: {
+    color: '#1FA971',
+  },
+  shareMsg: {
+    opacity: 0.8,
   },
   newButton: {
     paddingVertical: Spacing.two,

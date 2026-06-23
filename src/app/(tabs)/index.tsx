@@ -6,8 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useAuth } from '@/lib/auth';
+import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
+import { getItem, removeItem } from '@/lib/storage';
 
 type Group = {
   id: number;
@@ -36,6 +37,15 @@ export default function GroupsScreen() {
   useEffect(() => {
     loadGroups();
   }, [loadGroups]);
+
+  // Resume a pending invite saved before the user signed in.
+  useEffect(() => {
+    getItem(PENDING_INVITE_KEY).then((pending) => {
+      if (pending) {
+        removeItem(PENDING_INVITE_KEY).then(() => router.replace(`/join/${pending}`));
+      }
+    });
+  }, []);
 
   return (
     <ThemedView style={styles.container}>

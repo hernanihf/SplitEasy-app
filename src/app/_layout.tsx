@@ -13,7 +13,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthFlow = segments[0] === 'login' || segments[0] === 'auth';
+    const inAuthFlow =
+      segments[0] === 'login' || segments[0] === 'auth' || segments[0] === 'join';
 
     if (!token && !inAuthFlow) {
       router.replace('/login');

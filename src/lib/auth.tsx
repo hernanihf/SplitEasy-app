@@ -5,6 +5,10 @@ import { getItem, removeItem, setItem } from '@/lib/storage';
 
 const TOKEN_KEY = 'spliteasy.jwt';
 
+// Set when an unauthenticated user opens an invite link, so the join can be
+// resumed after they sign in.
+export const PENDING_INVITE_KEY = 'spliteasy.pendingInvite';
+
 type AuthContextValue = {
   token: string | null;
   isLoading: boolean;
