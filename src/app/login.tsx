@@ -5,6 +5,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 
+import { GoogleG } from '@/components/google-g';
 import { Font, Palette } from '@/constants/design';
 import { googleLoginUrl, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
@@ -59,9 +60,7 @@ export default function LoginScreen() {
             onPress={handleGoogleLogin}
             disabled={isSigningIn}
             style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-            <View style={styles.gMark}>
-              <Text style={styles.gText}>G</Text>
-            </View>
+            <GoogleG size={20} />
             <Text style={styles.buttonText}>
               {isSigningIn ? t('login.connecting') : t('login.continueWithGoogle')}
             </Text>
@@ -120,17 +119,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   pressed: { opacity: 0.85 },
-  gMark: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: '#E2E6E3',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gText: { fontFamily: Font.sansBold, fontSize: 13, color: '#4285F4' },
   buttonText: { fontSize: 16, fontFamily: Font.sansSemibold, color: Palette.ink },
   terms: {
     textAlign: 'center',

@@ -7,17 +7,15 @@
     "icon": "./assets/images/icon.png",
     "scheme": "spliteasyapp",
     "userInterfaceStyle": "automatic",
-    "primaryColor": "#208AEF",
-    "backgroundColor": "#208AEF",
+    "primaryColor": "#0E7C5A",
+    "backgroundColor": "#F6F7F6",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#F6F7F6",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -27,8 +25,8 @@
       "name": "SplitEasy",
       "shortName": "SplitEasy",
       "lang": "en",
-      "themeColor": "#208AEF",
-      "backgroundColor": "#208AEF",
+      "themeColor": "#0E7C5A",
+      "backgroundColor": "#F6F7F6",
       "display": "standalone",
       "startUrl": "/",
       "bundler": "metro"
@@ -38,7 +36,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#F6F7F6",
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76
