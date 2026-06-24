@@ -1,7 +1,7 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -29,7 +29,7 @@ async function fileToFormData(uri: string, name: string, mimeType: string): Prom
 }
 
 export default function ScanReceiptScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, source } = useLocalSearchParams<{ id: string; source?: string }>();
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const { api } = useAuth();
@@ -68,6 +68,17 @@ export default function ScanReceiptScreen() {
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (!result.canceled) scanImageAsset(result.assets[0]);
   };
+
+  // When opened from the "Scan" shortcut, jump straight to the camera. If the
+  // user cancels or denies permission, they fall back to the options below.
+  const cameraAutoStarted = useRef(false);
+  useEffect(() => {
+    if (source === 'camera' && !cameraAutoStarted.current) {
+      cameraAutoStarted.current = true;
+      pickFromCamera();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source]);
 
   const pickFromLibrary = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -108,11 +119,8 @@ export default function ScanReceiptScreen() {
             </View>
           ) : (
             <View style={styles.buttons}>
-              <Pressable onPress={pickFromCamera} style={styles.button}>
-                <Text style={styles.buttonText}>{t('scanReceipt.takePhoto')}</Text>
-              </Pressable>
-              <Pressable onPress={pickFromLibrary} style={[styles.button, styles.secondary]}>
-                <Text style={[styles.buttonText, styles.secondaryText]}>{t('scanReceipt.chooseFromGallery')}</Text>
+              <Pressable onPress={pickFromLibrary} style={styles.button}>
+                <Text style={styles.buttonText}>{t('scanReceipt.chooseFromGallery')}</Text>
               </Pressable>
               <Pressable onPress={pickDocument} style={[styles.button, styles.secondary]}>
                 <Text style={[styles.buttonText, styles.secondaryText]}>{t('scanReceipt.choosePdf')}</Text>

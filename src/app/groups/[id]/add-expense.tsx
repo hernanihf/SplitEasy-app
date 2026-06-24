@@ -147,7 +147,7 @@ export default function AddExpenseScreen() {
             ) : (
               <View style={styles.scanRow}>
                 <Pressable
-                  onPress={() => router.push(`/groups/${id}/scan-receipt`)}
+                  onPress={() => router.push(`/groups/${id}/scan-receipt?source=camera`)}
                   style={styles.scanBtn}>
                   <Text style={styles.scanBtnText}>{t('addExpense.scan')}</Text>
                 </Pressable>
