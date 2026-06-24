@@ -3,12 +3,13 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, Radius, initial, type ThemeColors } from '@/constants/design';
+import { Avatar } from '@/components/avatar';
+import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { useColors, useSettings, type ThemePref } from '@/lib/settings';
 
-type Me = { id: number; name: string; email: string };
+type Me = { id: number; name: string; email: string; avatar_url: string };
 
 const THEME_CYCLE: ThemePref[] = ['system', 'light', 'dark'];
 const THEME_GLYPH: Record<ThemePref, string> = { system: '🌓', light: '☀️', dark: '🌙' };
@@ -45,9 +46,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.card}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initial(name)}</Text>
-            </View>
+            <Avatar uri={me?.avatar_url} name={name} size={58} color={Palette.green} fontSize={23} />
             <View style={styles.info}>
               <Text style={styles.name}>{name}</Text>
               {me?.email ? <Text style={styles.email}>{me.email}</Text> : null}

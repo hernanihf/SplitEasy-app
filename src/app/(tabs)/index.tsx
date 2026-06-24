@@ -3,7 +3,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, Radius, initial, tileBg, type ThemeColors } from '@/constants/design';
+import { Avatar } from '@/components/avatar';
+import { Font, Radius, tileBg, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -28,6 +29,7 @@ export default function HomeScreen() {
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const [home, setHome] = useState<HomeData | null>(null);
   const [name, setName] = useState<string>(t('profile.anonymous'));
+  const [avatar, setAvatar] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -37,8 +39,11 @@ export default function HomeScreen() {
       .then(setHome)
       .catch(() => setError(t('home.loadError')));
     api
-      .get<{ name: string }>('/api/v1/users/me')
-      .then((u) => setName(u.name?.split(' ')[0] || t('profile.anonymous')))
+      .get<{ name: string; avatar_url: string }>('/api/v1/users/me')
+      .then((u) => {
+        setName(u.name?.split(' ')[0] || t('profile.anonymous'));
+        setAvatar(u.avatar_url || null);
+      })
       .catch(() => {});
   }, [api]);
 
@@ -64,9 +69,9 @@ export default function HomeScreen() {
               <Text style={styles.greeting}>{t('home.greeting', { name })}</Text>
               <Text style={styles.title}>{t('home.title')}</Text>
             </View>
-            <View style={[styles.avatar, { backgroundColor: Palette.green }]}>
-              <Text style={styles.avatarText}>{initial(name)}</Text>
-            </View>
+            <Pressable onPress={() => router.navigate('/profile')} hitSlop={8}>
+              <Avatar uri={avatar} name={name} size={42} color={Palette.green} fontSize={16} />
+            </Pressable>
           </View>
 
           {/* balance hero */}
