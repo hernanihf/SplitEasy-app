@@ -340,7 +340,7 @@ const makeStyles = (Palette: ThemeColors) =>
   },
   tabActive: { backgroundColor: Palette.ink, borderColor: Palette.ink },
   tabText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.muted3 },
-  tabTextActive: { color: '#fff' },
+  tabTextActive: { color: Palette.bg },
   list: { paddingHorizontal: 20, paddingTop: 16, gap: 9 },
   expenseCard: {
     backgroundColor: Palette.card,
@@ -403,8 +403,8 @@ const makeStyles = (Palette: ThemeColors) =>
     gap: 9,
   },
   pressed: { opacity: 0.85 },
-  fabPlus: { color: '#fff', fontSize: 20, lineHeight: 22 },
-  fabText: { color: '#fff', fontSize: 15, fontFamily: Font.sansSemibold },
+  fabPlus: { color: Palette.bg, fontSize: 20, lineHeight: 22 },
+  fabText: { color: Palette.bg, fontSize: 15, fontFamily: Font.sansSemibold },
   toast: {
     position: 'absolute',
     bottom: 96,
@@ -414,5 +414,5 @@ const makeStyles = (Palette: ThemeColors) =>
     paddingHorizontal: 20,
     borderRadius: 14,
   },
-  toastText: { color: '#fff', fontSize: 13.5, fontFamily: Font.sansMedium },
+  toastText: { color: Palette.bg, fontSize: 13.5, fontFamily: Font.sansMedium },
 });

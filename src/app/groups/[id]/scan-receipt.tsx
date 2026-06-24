@@ -112,10 +112,10 @@ export default function ScanReceiptScreen() {
                 <Text style={styles.buttonText}>{t('scanReceipt.takePhoto')}</Text>
               </Pressable>
               <Pressable onPress={pickFromLibrary} style={[styles.button, styles.secondary]}>
-                <Text style={styles.buttonText}>{t('scanReceipt.chooseFromGallery')}</Text>
+                <Text style={[styles.buttonText, styles.secondaryText]}>{t('scanReceipt.chooseFromGallery')}</Text>
               </Pressable>
               <Pressable onPress={pickDocument} style={[styles.button, styles.secondary]}>
-                <Text style={styles.buttonText}>{t('scanReceipt.choosePdf')}</Text>
+                <Text style={[styles.buttonText, styles.secondaryText]}>{t('scanReceipt.choosePdf')}</Text>
               </Pressable>
             </View>
           )}
@@ -161,8 +161,9 @@ const makeStyles = (Palette: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  secondary: { backgroundColor: Palette.ink },
+  secondary: { backgroundColor: Palette.inputBg },
   buttonText: { color: '#fff', fontSize: 15, fontFamily: Font.sansSemibold },
+  secondaryText: { color: Palette.ink },
   scanningRow: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 10 },
   spinner: {
     width: 22,
