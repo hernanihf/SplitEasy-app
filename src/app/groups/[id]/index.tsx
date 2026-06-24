@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BottomNav } from '@/components/bottom-nav';
 import { Font, Radius, avatarColor, initial, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
@@ -285,6 +286,7 @@ export default function GroupDetailScreen() {
           </View>
         )}
       </SafeAreaView>
+      <BottomNav active="index" />
     </View>
   );
 }
