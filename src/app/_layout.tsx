@@ -10,12 +10,14 @@ import {
   GeistMono_600SemiBold,
 } from '@expo-google-fonts/geist-mono';
 import { Slot, useRouter, useSegments } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
-import { Palette } from '@/constants/design';
+import { LightColors } from '@/constants/design';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { SettingsProvider, useSettings } from '@/lib/settings';
 
 // Max content width: the app is mobile-first, so on wide (web/desktop)
 // viewports we centre it in a phone-sized column instead of stretching.
@@ -44,6 +46,33 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return children;
 }
 
+function ThemedShell() {
+  const { ready, colors, scheme, language } = useSettings();
+  if (!ready) {
+    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  }
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.canvas, alignItems: 'center' }}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {/* Remount on language change so memoized t() calls (React Compiler)
+          re-evaluate with the new locale. */}
+      <View
+        key={language}
+        style={{
+          flex: 1,
+          width: '100%',
+          maxWidth: MAX_WIDTH,
+          backgroundColor: colors.bg,
+          overflow: 'hidden',
+        }}>
+        <AuthGate>
+          <Slot />
+        </AuthGate>
+      </View>
+    </View>
+  );
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Geist: Geist_400Regular,
@@ -56,23 +85,14 @@ export default function RootLayout() {
   });
 
   if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: Palette.bg }} />;
+    return <View style={{ flex: 1, backgroundColor: LightColors.bg }} />;
   }
 
   return (
-    <AuthProvider>
-      <View style={styles.canvas}>
-        <View style={styles.column}>
-          <AuthGate>
-            <Slot />
-          </AuthGate>
-        </View>
-      </View>
-    </AuthProvider>
+    <SettingsProvider>
+      <AuthProvider>
+        <ThemedShell />
+      </AuthProvider>
+    </SettingsProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: '#E7E5DF', alignItems: 'center' },
-  column: { flex: 1, width: '100%', maxWidth: MAX_WIDTH, backgroundColor: Palette.bg, overflow: 'hidden' },
-});

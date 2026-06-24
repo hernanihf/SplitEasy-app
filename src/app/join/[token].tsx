@@ -1,16 +1,19 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Font, Palette } from '@/constants/design';
+import { Font, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
+import { useColors } from '@/lib/settings';
 import { setItem } from '@/lib/storage';
 
 export default function JoinScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const { token: authToken, isLoading, api } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const Palette = useColors();
+  const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
   useEffect(() => {
     if (isLoading || !token) return;
@@ -33,7 +36,8 @@ export default function JoinScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Palette: ThemeColors) =>
+  StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Palette.bg,

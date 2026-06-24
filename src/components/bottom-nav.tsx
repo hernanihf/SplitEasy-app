@@ -1,7 +1,9 @@
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Font, Palette } from '@/constants/design';
+import { Font, type ThemeColors } from '@/constants/design';
 import { t } from '@/lib/i18n';
+import { useColors } from '@/lib/settings';
 
 const TABS: Record<string, { glyph: string; labelKey: string }> = {
   index: { glyph: '◎', labelKey: 'nav.groups' },
@@ -20,6 +22,8 @@ type NavProps = {
 };
 
 export function BottomNav({ state, navigation }: { state: NavProps['state']; navigation: any }) {
+  const Palette = useColors();
+  const styles = useMemo(() => makeStyles(Palette), [Palette]);
   return (
     <View style={styles.bar}>
       {state.routes.map((route, index) => {
@@ -51,14 +55,15 @@ export function BottomNav({ state, navigation }: { state: NavProps['state']; nav
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Palette: ThemeColors) =>
+  StyleSheet.create({
   bar: {
     height: 78,
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingTop: 11,
     paddingHorizontal: 20,
-    backgroundColor: Platform.OS === 'web' ? 'rgba(255,255,255,0.92)' : '#FFFFFF',
+    backgroundColor: Palette.card,
     borderTopWidth: 1,
     borderTopColor: Palette.cardBorder,
   },

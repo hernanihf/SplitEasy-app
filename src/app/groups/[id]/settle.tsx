@@ -3,9 +3,10 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, Palette, Radius, avatarColor, initial } from '@/constants/design';
+import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
+import { useColors } from '@/lib/settings';
 
 export default function SettleScreen() {
   const { id, from, to, amount, fromName, toName } = useLocalSearchParams<{
@@ -17,6 +18,8 @@ export default function SettleScreen() {
     toName?: string;
   }>();
   const { api } = useAuth();
+  const Palette = useColors();
+  const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
   const maxAmount = useMemo(() => parseFloat(amount ?? '0') || 0, [amount]);
   const [value, setValue] = useState(amount ?? '');
@@ -107,7 +110,8 @@ export default function SettleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Palette: ThemeColors) =>
+  StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,16,12,0.42)' },
   sheetWrap: { width: '100%' },

@@ -1,11 +1,12 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, Palette, Radius, avatarColor, initial, tileBg } from '@/constants/design';
+import { Font, Radius, avatarColor, initial, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
+import { useColors } from '@/lib/settings';
 
 export type Group = {
   id: number;
@@ -27,6 +28,8 @@ type Debt = { from_user_id: number; to_user_id: number; amount: number };
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api } = useAuth();
+  const Palette = useColors();
+  const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
   const [group, setGroup] = useState<Group | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -286,7 +289,8 @@ export default function GroupDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Palette: ThemeColors) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: Palette.bg },
   safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },

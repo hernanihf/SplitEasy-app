@@ -1,13 +1,14 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, Palette, Radius } from '@/constants/design';
+import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
+import { useColors } from '@/lib/settings';
 
 type ReceiptScan = {
   merchant_name: string;
@@ -29,6 +30,8 @@ async function fileToFormData(uri: string, name: string, mimeType: string): Prom
 
 export default function ScanReceiptScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const Palette = useColors();
+  const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const { api } = useAuth();
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +127,8 @@ export default function ScanReceiptScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Palette: ThemeColors) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: Palette.bg },
   safe: { flex: 1 },
   topbar: {

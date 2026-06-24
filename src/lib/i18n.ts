@@ -39,7 +39,10 @@ const translations = {
       title: 'Profile',
       logout: 'Log out',
       anonymous: 'You',
+      language: 'Language',
+      appearance: 'Appearance',
     },
+    theme: { system: 'System', light: 'Light', dark: 'Dark' },
     groupDetail: {
       userN: 'User #%{id}',
       loadError: 'Could not load the group.',
@@ -168,7 +171,10 @@ const translations = {
       title: 'Perfil',
       logout: 'Cerrar sesión',
       anonymous: 'Vos',
+      language: 'Idioma',
+      appearance: 'Apariencia',
     },
+    theme: { system: 'Sistema', light: 'Claro', dark: 'Oscuro' },
     groupDetail: {
       userN: 'Usuario #%{id}',
       loadError: 'No se pudo cargar el grupo.',
@@ -264,12 +270,19 @@ const translations = {
 
 const i18n = new I18n(translations);
 
-const deviceLanguage = getLocales()[0]?.languageCode ?? 'en';
-i18n.locale = deviceLanguage === 'es' ? 'es' : 'en';
+export type Language = 'es' | 'en';
+
+// The device/browser language, used as the default before the user overrides it.
+export const deviceLanguage: Language =
+  (getLocales()[0]?.languageCode ?? 'en') === 'es' ? 'es' : 'en';
+
+i18n.locale = deviceLanguage;
 i18n.enableFallback = true;
 i18n.defaultLocale = 'en';
 
-const numberLocale = i18n.locale === 'es' ? 'es-AR' : 'en-US';
+export function setLocale(lang: Language) {
+  i18n.locale = lang;
+}
 
 export function t(key: string, options?: Record<string, unknown>): string {
   return i18n.t(key, options);
@@ -277,6 +290,7 @@ export function t(key: string, options?: Record<string, unknown>): string {
 
 /** Formats a monetary amount with locale-aware grouping/decimals, prefixed with "$". */
 export function formatAmount(amount: number): string {
+  const numberLocale = i18n.locale === 'es' ? 'es-AR' : 'en-US';
   return `$${new Intl.NumberFormat(numberLocale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

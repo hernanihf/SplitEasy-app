@@ -3,8 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, Palette, Radius, avatarColor, initial } from '@/constants/design';
+import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
+import { useColors } from '@/lib/settings';
 import { formatAmount, t } from '@/lib/i18n';
 import type { Group } from '@/app/groups/[id]/index';
 
@@ -23,6 +24,8 @@ export default function AddExpenseScreen() {
     amount?: string;
   }>();
   const { api } = useAuth();
+  const Palette = useColors();
+  const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
   const [group, setGroup] = useState<Group | null>(null);
   const [desc, setDesc] = useState(prefillDesc ?? '');
@@ -262,7 +265,8 @@ export default function AddExpenseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Palette: ThemeColors) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: Palette.bg },
   safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },

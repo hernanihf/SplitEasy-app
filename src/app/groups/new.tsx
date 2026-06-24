@@ -1,16 +1,19 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, GROUP_EMOJIS, Palette, Radius } from '@/constants/design';
+import { Font, GROUP_EMOJIS, Radius, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
+import { useColors } from '@/lib/settings';
 
 type Group = { id: number };
 
 export default function NewGroupScreen() {
   const { api } = useAuth();
+  const Palette = useColors();
+  const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState(GROUP_EMOJIS[0]);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +96,8 @@ export default function NewGroupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Palette: ThemeColors) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: Palette.bg },
   safe: { flex: 1 },
   topbar: {

@@ -1,6 +1,26 @@
 // Design tokens derived from the SplitEasy design (SplitEasy.dc.html).
 
-export const Palette = {
+export type ThemeColors = {
+  green: string;
+  greenDark: string;
+  greenTint: string;
+  greenTintBorder: string;
+  ink: string;
+  muted: string;
+  muted2: string;
+  muted3: string;
+  faint: string;
+  bg: string;
+  inputBg: string;
+  card: string;
+  cardBorder: string;
+  divider: string;
+  blue: string;
+  red: string;
+  canvas: string; // the area around the centered app column on wide screens
+};
+
+export const LightColors: ThemeColors = {
   green: '#0E7C5A',
   greenDark: '#0a6349',
   greenTint: '#E6F2EC',
@@ -17,7 +37,31 @@ export const Palette = {
   divider: '#F1F3F2',
   blue: '#2F6FED',
   red: '#C2453B',
-} as const;
+  canvas: '#E7E5DF',
+};
+
+export const DarkColors: ThemeColors = {
+  green: '#27B37D',
+  greenDark: '#1C9266',
+  greenTint: '#15302A',
+  greenTintBorder: '#23463C',
+  ink: '#EAF0EC',
+  muted: '#8C988F',
+  muted2: '#A6B0A9',
+  muted3: '#93A09A',
+  faint: '#6C766F',
+  bg: '#0E1311',
+  inputBg: '#1A211E',
+  card: '#161D1A',
+  cardBorder: '#262E2A',
+  divider: '#222A26',
+  blue: '#5B8DEF',
+  red: '#E0655B',
+  canvas: '#000000',
+};
+
+// Light palette, kept as the default for any non-themed/static usage.
+export const Palette: ThemeColors = LightColors;
 
 export const Radius = {
   sm: 10,

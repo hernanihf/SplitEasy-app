@@ -1,20 +1,23 @@
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 
 import { GoogleG } from '@/components/google-g';
-import { Font, Palette } from '@/constants/design';
+import { Font, type ThemeColors } from '@/constants/design';
 import { googleLoginUrl, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
+import { useColors } from '@/lib/settings';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const Palette = useColors();
+  const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
   const handleGoogleLogin = async () => {
     setIsSigningIn(true);
@@ -72,7 +75,8 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Palette: ThemeColors) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: Palette.bg, overflow: 'hidden' },
   blob: { position: 'absolute', borderRadius: 999 },
   blobGreen: {
@@ -112,7 +116,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: Palette.card,
     borderWidth: 1,
-    borderColor: '#E2E6E3',
+    borderColor: Palette.cardBorder,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

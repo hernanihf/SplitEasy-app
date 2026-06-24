@@ -1,11 +1,12 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, Palette, Radius, avatarColor, initial, tileBg } from '@/constants/design';
+import { Font, Radius, initial, tileBg, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
+import { useColors } from '@/lib/settings';
 import { getItem, removeItem } from '@/lib/storage';
 
 type GroupSummary = {
@@ -23,6 +24,8 @@ type HomeData = {
 
 export default function HomeScreen() {
   const { api } = useAuth();
+  const Palette = useColors();
+  const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const [home, setHome] = useState<HomeData | null>(null);
   const [name, setName] = useState<string>(t('profile.anonymous'));
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +145,8 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Palette: ThemeColors) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: Palette.bg },
   safe: { flex: 1 },
   scroll: { paddingBottom: 24 },

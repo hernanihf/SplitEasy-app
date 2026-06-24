@@ -1,11 +1,12 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, Palette, avatarColor, initial } from '@/constants/design';
+import { Font, avatarColor, initial, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, i18n, t } from '@/lib/i18n';
+import { useColors } from '@/lib/settings';
 
 type ActivityEvent = {
   type: 'expense' | 'settlement';
@@ -30,6 +31,8 @@ function shortDate(iso: string): string {
 export default function ActivityScreen() {
   const { api } = useAuth();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
+  const Palette = useColors();
+  const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,7 +92,8 @@ export default function ActivityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Palette: ThemeColors) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: Palette.bg },
   safe: { flex: 1 },
   scroll: { paddingBottom: 24 },
