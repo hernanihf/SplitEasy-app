@@ -58,9 +58,11 @@ export default function ActivityScreen() {
             {events.map((ev, i) => {
               const settlement = ev.type === 'settlement';
               const emoji = settlement ? '💸' : expenseEmoji(ev.title);
+              // Payments share a fixed tile colour so they match the group history.
+              const tileKey = settlement ? 'payment' : ev.title;
               return (
                 <View key={i} style={styles.row}>
-                  <View style={[styles.tile, { backgroundColor: tileBg(ev.title) }]}>
+                  <View style={[styles.tile, { backgroundColor: tileBg(tileKey) }]}>
                     <Text style={emoji ? styles.tileEmoji : styles.tileInitial}>
                       {emoji ?? initial(ev.title)}
                     </Text>
