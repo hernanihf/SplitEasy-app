@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -41,6 +41,7 @@ export default function GroupDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -64,6 +65,26 @@ export default function GroupDetailScreen() {
 
   useFocusEffect(load);
 
+  // Preload the invite link so the copy button can write to the clipboard
+  // synchronously on click — Safari rejects clipboard writes that happen after
+  // an awaited fetch, since the user gesture is considered consumed.
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      api
+        .get<{ url: string }>(`/api/v1/groups/${id}/invite`)
+        .then(({ url }) => setInviteUrl(url))
+        .catch(() => {});
+    }, [id, api]),
+  );
+
+  // Auto-dismiss the share/copy toast.
+  useEffect(() => {
+    if (!shareMsg) return;
+    const timer = setTimeout(() => setShareMsg(null), 2200);
+    return () => clearTimeout(timer);
+  }, [shareMsg]);
+
   const memberName = useCallback(
     (uid: number) =>
       group?.members.find((m) => m.id === uid)?.name ?? t('groupDetail.userN', { id: uid }),
@@ -72,21 +93,19 @@ export default function GroupDetailScreen() {
 
   const handleShare = useCallback(async () => {
     try {
-      const { url } = await api.get<{ url: string }>(`/api/v1/groups/${id}/invite`);
       if (Platform.OS === 'web') {
-        const nav = navigator as Navigator & { share?: (d: { url: string }) => Promise<void> };
-        if (nav.share) await nav.share({ url });
-        else {
-          await navigator.clipboard.writeText(url);
-          setShareMsg(t('groupDetail.linkCopied'));
-        }
+        // Copy straight to the clipboard instead of opening the OS share sheet.
+        const url = inviteUrl ?? (await api.get<{ url: string }>(`/api/v1/groups/${id}/invite`)).url;
+        await navigator.clipboard.writeText(url);
+        setShareMsg(t('groupDetail.linkCopied'));
       } else {
+        const { url } = await api.get<{ url: string }>(`/api/v1/groups/${id}/invite`);
         await Share.share({ message: url });
       }
     } catch {
       setShareMsg(t('groupDetail.shareError'));
     }
-  }, [api, id]);
+  }, [api, id, inviteUrl]);
 
   if (loading && !group) {
     return (
