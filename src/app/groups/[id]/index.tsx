@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { Font, Radius, avatarColor, expenseEmoji, initial, tileBg, type ThemeColors } from '@/constants/design';
@@ -278,12 +279,19 @@ export default function GroupDetailScreen() {
                   <Text style={styles.settledHint}>{t('groupDetail.allSettledHint')}</Text>
                 </View>
               ) : (
-                debts.map((d, i) => (
+                debts.map((d, i) => {
+                  // Show the other person's photo — the counterparty relative to me.
+                  const otherId =
+                    myId != null && d.from_user_id === myId ? d.to_user_id : d.from_user_id;
+                  return (
                   <View key={i} style={styles.balanceCard}>
-                    <View
-                      style={[styles.smallAvatar, { backgroundColor: avatarColor(d.from_user_id) }]}>
-                      <Text style={styles.smallAvatarText}>{initial(memberName(d.from_user_id))}</Text>
-                    </View>
+                    <Avatar
+                      uri={memberAvatar(otherId)}
+                      name={memberName(otherId)}
+                      size={40}
+                      color={avatarColor(otherId)}
+                      fontSize={15}
+                    />
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={styles.balanceText}>
                         {t('groupDetail.owes', {
@@ -313,7 +321,8 @@ export default function GroupDetailScreen() {
                       <Text style={styles.settleBtnText}>{t('groupDetail.settle')}</Text>
                     </Pressable>
                   </View>
-                ))
+                  );
+                })
               )}
             </View>
           )}
@@ -405,7 +414,6 @@ const makeStyles = (Palette: ThemeColors) =>
     gap: 13,
   },
   smallAvatar: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  smallAvatarText: { color: '#fff', fontFamily: Font.sansSemibold, fontSize: 15 },
   expenseEmoji: { fontSize: 19 },
   expenseInitial: { color: Palette.ink, fontFamily: Font.sansSemibold, fontSize: 16 },
   expenseDesc: { fontSize: 14.5, fontFamily: Font.sansSemibold, color: Palette.ink },
