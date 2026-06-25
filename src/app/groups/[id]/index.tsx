@@ -266,7 +266,7 @@ export default function GroupDetailScreen() {
                   const s = item.settlement;
                   return (
                     <View key={`s${s.id}`} style={styles.expenseCard}>
-                      <View style={[styles.smallAvatar, { backgroundColor: Palette.greenTint }]}>
+                      <View style={[styles.smallAvatar, { backgroundColor: tileBg(s.id) }]}>
                         <Text style={styles.expenseEmoji}>💸</Text>
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
