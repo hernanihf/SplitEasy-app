@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
-import { Font, Radius, avatarColor, initial, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, Radius, avatarColor, expenseEmoji, initial, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -14,7 +14,7 @@ export type Group = {
   id: number;
   name: string;
   emoji: string;
-  members: { id: number; name: string }[];
+  members: { id: number; name: string; avatar_url?: string | null }[];
 };
 
 type Expense = {
@@ -96,6 +96,11 @@ export default function GroupDetailScreen() {
   const memberName = useCallback(
     (uid: number) =>
       group?.members.find((m) => m.id === uid)?.name ?? t('groupDetail.userN', { id: uid }),
+    [group],
+  );
+
+  const memberAvatar = useCallback(
+    (uid: number) => group?.members.find((m) => m.id === uid)?.avatar_url ?? '',
     [group],
   );
 
@@ -232,11 +237,13 @@ export default function GroupDetailScreen() {
               {expenses.length === 0 && <Text style={styles.muted}>{t('groupDetail.allSettledHint')}</Text>}
               {expenses.map((ex) => {
                 const myShare = ex.splits?.find((s) => s.user_id === myId)?.amount;
+                const emoji = expenseEmoji(ex.description);
                 return (
                   <View key={ex.id} style={styles.expenseCard}>
-                    <View
-                      style={[styles.smallAvatar, { backgroundColor: avatarColor(ex.paid_by.id) }]}>
-                      <Text style={styles.smallAvatarText}>{initial(ex.paid_by.name)}</Text>
+                    <View style={[styles.smallAvatar, { backgroundColor: tileBg(ex.description) }]}>
+                      <Text style={emoji ? styles.expenseEmoji : styles.expenseInitial}>
+                        {emoji ?? initial(ex.description)}
+                      </Text>
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={styles.expenseDesc} numberOfLines={1}>
@@ -297,6 +304,8 @@ export default function GroupDetailScreen() {
                             amount: String(d.amount),
                             fromName: memberName(d.from_user_id),
                             toName: memberName(d.to_user_id),
+                            fromAvatar: memberAvatar(d.from_user_id),
+                            toAvatar: memberAvatar(d.to_user_id),
                           },
                         })
                       }
@@ -397,6 +406,8 @@ const makeStyles = (Palette: ThemeColors) =>
   },
   smallAvatar: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   smallAvatarText: { color: '#fff', fontFamily: Font.sansSemibold, fontSize: 15 },
+  expenseEmoji: { fontSize: 19 },
+  expenseInitial: { color: Palette.ink, fontFamily: Font.sansSemibold, fontSize: 16 },
   expenseDesc: { fontSize: 14.5, fontFamily: Font.sansSemibold, color: Palette.ink },
   expenseMeta: { marginTop: 3, fontSize: 12, color: Palette.muted },
   expenseAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink },

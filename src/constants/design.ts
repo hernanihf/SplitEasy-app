@@ -124,3 +124,37 @@ function hashString(s: string): number {
 }
 
 export const GROUP_EMOJIS = ['🏔️', '🏠', '🔥', '✈️', '🍽️', '🎉', '⚽', '🏖️', '🚗', '💸'];
+
+// Maps an expense description to a related emoji by keyword (English + Spanish).
+// Most specific keywords first; returns null when nothing matches so the caller
+// can fall back to the expense's initial.
+const EXPENSE_EMOJI: { emoji: string; words: string[] }[] = [
+  { emoji: '🚕', words: ['taxi', 'uber', 'cab', 'cabify', 'didi', 'remis', 'ride'] },
+  { emoji: '🎉', words: ['disco', 'club', 'party', 'fiesta', 'boliche', 'nightclub'] },
+  { emoji: '🍻', words: ['bar', 'beer', 'birra', 'cerveza', 'drink', 'trago', 'pub', 'pint'] },
+  { emoji: '🍷', words: ['wine', 'vino'] },
+  { emoji: '☕', words: ['coffee', 'cafe', 'café', 'starbucks'] },
+  { emoji: '🛒', words: ['grocery', 'groceries', 'market', 'super', 'súper', 'mercado', 'almacen', 'almacén', 'compras'] },
+  { emoji: '🍔', words: ['food', 'eat', 'lunch', 'dinner', 'breakfast', 'meal', 'comida', 'almuerzo', 'cena', 'desayuno', 'resto', 'restaurant', 'restaurante', 'burger', 'pizza', 'sushi'] },
+  { emoji: '⛽', words: ['gas', 'fuel', 'nafta', 'combustible', 'gasolina'] },
+  { emoji: '✈️', words: ['flight', 'plane', 'avion', 'avión', 'vuelo', 'airline', 'aerolinea', 'aerolínea'] },
+  { emoji: '🚆', words: ['train', 'subway', 'metro', 'bus', 'colectivo', 'subte', 'tren', 'transport', 'transporte', 'sube'] },
+  { emoji: '🏨', words: ['hotel', 'airbnb', 'hostel', 'lodging', 'hospedaje', 'alojamiento'] },
+  { emoji: '🎬', words: ['movie', 'cinema', 'cine', 'pelicula', 'película', 'film'] },
+  { emoji: '🛍️', words: ['shopping', 'shop', 'tienda', 'ropa', 'clothes', 'clothing'] },
+  { emoji: '💊', words: ['pharmacy', 'farmacia', 'medicine', 'medicina', 'remedio', 'health', 'salud', 'doctor', 'medico', 'médico'] },
+  { emoji: '⚽', words: ['soccer', 'futbol', 'fútbol', 'football', 'sport', 'deporte'] },
+  { emoji: '🎮', words: ['game', 'games', 'juego', 'gaming', 'playstation', 'xbox'] },
+  { emoji: '🏠', words: ['rent', 'alquiler', 'renta', 'house', 'casa'] },
+  { emoji: '🎁', words: ['gift', 'regalo', 'present'] },
+  { emoji: '🧾', words: ['bill', 'factura', 'expensas', 'utilities', 'luz', 'internet', 'wifi', 'agua', 'water'] },
+];
+
+export function expenseEmoji(description: string | undefined | null): string | null {
+  const text = (description ?? '').toLowerCase();
+  if (!text.trim()) return null;
+  for (const { emoji, words } of EXPENSE_EMOJI) {
+    if (words.some((w) => text.includes(w))) return emoji;
+  }
+  return null;
+}

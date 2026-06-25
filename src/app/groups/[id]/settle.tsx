@@ -3,19 +3,22 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
+import { Avatar } from '@/components/avatar';
+import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
 
 export default function SettleScreen() {
-  const { id, from, to, amount, fromName, toName } = useLocalSearchParams<{
+  const { id, from, to, amount, fromName, toName, fromAvatar, toAvatar } = useLocalSearchParams<{
     id: string;
     from: string;
     to: string;
     amount: string;
     fromName?: string;
     toName?: string;
+    fromAvatar?: string;
+    toAvatar?: string;
   }>();
   const { api } = useAuth();
   const Palette = useColors();
@@ -62,9 +65,7 @@ export default function SettleScreen() {
 
           <View style={styles.flow}>
             <View style={styles.person}>
-              <View style={[styles.avatar, { backgroundColor: avatarColor(Number(from)) }]}>
-                <Text style={styles.avatarText}>{initial(fName)}</Text>
-              </View>
+              <Avatar uri={fromAvatar} name={fName} size={48} color={avatarColor(Number(from))} fontSize={18} />
               <Text style={styles.personName}>{fName}</Text>
             </View>
             <View style={styles.person}>
@@ -72,9 +73,7 @@ export default function SettleScreen() {
               <Text style={styles.flowAmount}>{formatAmount(maxAmount)}</Text>
             </View>
             <View style={styles.person}>
-              <View style={[styles.avatar, { backgroundColor: avatarColor(Number(to)) }]}>
-                <Text style={styles.avatarText}>{initial(tName)}</Text>
-              </View>
+              <Avatar uri={toAvatar} name={tName} size={48} color={avatarColor(Number(to))} fontSize={18} />
               <Text style={styles.personName}>{tName}</Text>
             </View>
           </View>
@@ -136,8 +135,6 @@ const makeStyles = (Palette: ThemeColors) =>
     borderRadius: Radius.lg,
   },
   person: { alignItems: 'center' },
-  avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontSize: 18, fontFamily: Font.sansSemibold },
   personName: { marginTop: 7, fontSize: 12, fontFamily: Font.sansMedium, color: Palette.ink },
   arrow: { fontSize: 20, color: Palette.green },
   flowAmount: { marginTop: 4, fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink },
