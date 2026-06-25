@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { InstallPrompt } from '@/components/install-prompt';
 import { Font, Radius, tileBg, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
@@ -146,6 +147,7 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+      <InstallPrompt />
     </View>
   );
 }

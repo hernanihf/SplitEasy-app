@@ -4,6 +4,13 @@ import { I18n } from 'i18n-js';
 const translations = {
   en: {
     nav: { groups: 'Groups', activity: 'Activity', profile: 'Profile' },
+    install: {
+      title: 'Install SplitEasy',
+      subtitle: 'Quick access from your home screen',
+      iosSubtitle: 'Tap the Share icon, then “Add to Home Screen”',
+      action: 'Install',
+      dismiss: 'Dismiss',
+    },
     login: {
       tagline1: 'Split bills,',
       tagline2: 'not friendships.',
@@ -135,6 +142,13 @@ const translations = {
   },
   es: {
     nav: { groups: 'Grupos', activity: 'Actividad', profile: 'Perfil' },
+    install: {
+      title: 'Instalar SplitEasy',
+      subtitle: 'Acceso rápido desde tu pantalla de inicio',
+      iosSubtitle: 'Tocá Compartir y luego “Agregar a inicio”',
+      action: 'Instalar',
+      dismiss: 'Descartar',
+    },
     login: {
       tagline1: 'Dividí gastos,',
       tagline2: 'no amistades.',
