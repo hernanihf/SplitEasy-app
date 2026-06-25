@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { Font, Radius, avatarColor, initial, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
@@ -126,9 +127,7 @@ export default function GroupDetailScreen() {
       <SafeAreaView edges={['top']} style={styles.safe}>
         {/* top bar */}
         <View style={styles.topbar}>
-          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-            <Text style={styles.back}>‹</Text>
-          </Pressable>
+          <BackButton onPress={() => router.back()} />
           <View style={styles.topActions}>
             <Pressable onPress={handleShare} style={styles.iconBtn}>
               <Text style={styles.shareGlyph}>🔗</Text>
@@ -315,7 +314,6 @@ const makeStyles = (Palette: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  back: { fontSize: 22, color: Palette.ink, lineHeight: 24 },
   shareGlyph: { fontSize: 15 },
   settlePill: { backgroundColor: Palette.greenTint, borderRadius: 11, paddingVertical: 9, paddingHorizontal: 14 },
   settlePillText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.green },

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BackButton } from '@/components/back-button';
 import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { useColors } from '@/lib/settings';
@@ -111,9 +112,7 @@ export default function AddExpenseScreen() {
     <View style={styles.root}>
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.topbar}>
-          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-            <Text style={styles.back}>‹</Text>
-          </Pressable>
+          <BackButton onPress={() => router.back()} />
           <Text style={styles.topTitle}>{t('addExpense.title')}</Text>
           <View style={{ width: 38 }} />
         </View>
@@ -279,17 +278,6 @@ const makeStyles = (Palette: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Palette.card,
-    borderWidth: 1,
-    borderColor: Palette.cardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  back: { fontSize: 22, color: Palette.ink, lineHeight: 24 },
   topTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
   scroll: { paddingHorizontal: 20, paddingBottom: 24 },
   amountWrap: { alignItems: 'center', paddingVertical: 14 },

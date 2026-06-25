@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Logo } from '@/components/logo';
 import { Font, type ThemeColors } from '@/constants/design';
 import { t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -75,11 +76,9 @@ export function InstallPrompt() {
 
   return (
     <View style={styles.banner} accessibilityRole="alert">
-      <Image
-        source={require('../../assets/images/icon.png')}
-        style={styles.icon}
-        accessibilityIgnoresInvertColors
-      />
+      <View style={styles.icon}>
+        <Logo size={36} />
+      </View>
       <View style={styles.copy}>
         <Text style={styles.title}>{t('install.title')}</Text>
         <Text style={styles.subtitle} numberOfLines={2}>
@@ -117,7 +116,7 @@ function makeStyles(Palette: ThemeColors) {
       // Subtle lift so it reads as floating above the list (web-only).
       boxShadow: '0 6px 24px rgba(0,0,0,0.12)',
     } as object,
-    icon: { width: 40, height: 40, borderRadius: 11 },
+    icon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     copy: { flex: 1, minWidth: 0 },
     title: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.ink },
     subtitle: { fontSize: 12, fontFamily: Font.sans, color: Palette.muted2, marginTop: 1 },
