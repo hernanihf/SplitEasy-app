@@ -40,7 +40,8 @@ export default function GroupDetailScreen() {
   const [tab, setTab] = useState<'expenses' | 'balances'>('expenses');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -78,12 +79,19 @@ export default function GroupDetailScreen() {
     }, [id, api]),
   );
 
-  // Auto-dismiss the share/copy toast.
+  // Auto-dismiss the error toast.
   useEffect(() => {
-    if (!shareMsg) return;
-    const timer = setTimeout(() => setShareMsg(null), 2200);
+    if (!errorMsg) return;
+    const timer = setTimeout(() => setErrorMsg(null), 2600);
     return () => clearTimeout(timer);
-  }, [shareMsg]);
+  }, [errorMsg]);
+
+  // Briefly show the copied tick on the share button.
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 1600);
+    return () => clearTimeout(timer);
+  }, [copied]);
 
   const memberName = useCallback(
     (uid: number) =>
@@ -92,18 +100,25 @@ export default function GroupDetailScreen() {
   );
 
   const handleShare = useCallback(async () => {
-    try {
-      if (Platform.OS === 'web') {
-        // Copy straight to the clipboard instead of opening the OS share sheet.
-        const url = inviteUrl ?? (await api.get<{ url: string }>(`/api/v1/groups/${id}/invite`)).url;
-        await navigator.clipboard.writeText(url);
-        setShareMsg(t('groupDetail.linkCopied'));
-      } else {
-        const { url } = await api.get<{ url: string }>(`/api/v1/groups/${id}/invite`);
-        await Share.share({ message: url });
+    let url = inviteUrl;
+    if (!url) {
+      try {
+        url = (await api.get<{ url: string }>(`/api/v1/groups/${id}/invite`)).url;
+      } catch {
+        setErrorMsg(t('groupDetail.shareError'));
+        return;
       }
-    } catch {
-      setShareMsg(t('groupDetail.shareError'));
+    }
+    if (Platform.OS === 'web') {
+      // Copy straight to the clipboard instead of opening the OS share sheet.
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+      } catch {
+        setErrorMsg(t('groupDetail.copyError'));
+      }
+    } else {
+      Share.share({ message: url }).catch(() => {});
     }
   }, [api, id, inviteUrl]);
 
@@ -148,8 +163,15 @@ export default function GroupDetailScreen() {
         <View style={styles.topbar}>
           <BackButton onPress={() => router.back()} />
           <View style={styles.topActions}>
-            <Pressable onPress={handleShare} style={styles.iconBtn}>
-              <Text style={styles.shareGlyph}>🔗</Text>
+            <Pressable
+              onPress={handleShare}
+              style={styles.iconBtn}
+              accessibilityLabel={t('groupDetail.copyLink')}>
+              {copied ? (
+                <Text style={styles.copiedTick}>✓</Text>
+              ) : (
+                <Text style={styles.shareGlyph}>🔗</Text>
+              )}
             </Pressable>
             <Pressable onPress={() => setTab('balances')} style={styles.settlePill}>
               <Text style={styles.settlePillText}>{t('groupDetail.settleUp')}</Text>
@@ -298,9 +320,10 @@ export default function GroupDetailScreen() {
           </Pressable>
         </View>
 
-        {shareMsg && (
+        {errorMsg && (
           <View style={styles.toast}>
-            <Text style={styles.toastText}>{shareMsg}</Text>
+            <Text style={styles.toastDot}>!</Text>
+            <Text style={styles.toastText}>{errorMsg}</Text>
           </View>
         )}
       </SafeAreaView>
@@ -334,6 +357,7 @@ const makeStyles = (Palette: ThemeColors) =>
     justifyContent: 'center',
   },
   shareGlyph: { fontSize: 15 },
+  copiedTick: { color: Palette.green, fontSize: 18, fontFamily: Font.sansBold, lineHeight: 20 },
   settlePill: { backgroundColor: Palette.greenTint, borderRadius: 11, paddingVertical: 9, paddingHorizontal: 14 },
   settlePillText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.green },
   scroll: { paddingTop: 14, paddingBottom: 110 },
@@ -426,12 +450,28 @@ const makeStyles = (Palette: ThemeColors) =>
   fabText: { color: Palette.bg, fontSize: 15, fontFamily: Font.sansSemibold },
   toast: {
     position: 'absolute',
-    bottom: 96,
+    top: 52,
     alignSelf: 'center',
-    backgroundColor: Palette.ink,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 14,
+    maxWidth: '90%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    backgroundColor: Palette.red,
+    paddingVertical: 11,
+    paddingHorizontal: 15,
+    borderRadius: 12,
   },
-  toastText: { color: Palette.bg, fontSize: 13.5, fontFamily: Font.sansMedium },
+  toastDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    color: Palette.red,
+    fontSize: 12,
+    fontFamily: Font.sansBold,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  toastText: { color: '#FFFFFF', fontSize: 13.5, fontFamily: Font.sansMedium },
 });
