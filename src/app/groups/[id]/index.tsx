@@ -178,8 +178,8 @@ export default function GroupDetailScreen() {
     if (d.to_user_id === myId) myNet += d.amount;
     if (d.from_user_id === myId) myNet -= d.amount;
   }
-  const owed = myNet > 0.01;
-  const owe = myNet < -0.01;
+  const owed = myNet > 0;
+  const owe = myNet < 0;
   const summaryColor = owed ? Palette.green : owe ? Palette.red : Palette.muted;
   const summaryWord = owed
     ? t('groupDetail.wordOwed')

@@ -7,7 +7,7 @@ import { BackButton } from '@/components/back-button';
 import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { useColors } from '@/lib/settings';
-import { formatAmount, t } from '@/lib/i18n';
+import { formatAmount, t, toCents } from '@/lib/i18n';
 import type { Group } from '@/app/groups/[id]/index';
 
 type SplitMethod = 'equal' | 'fixed' | 'percentage';
@@ -51,6 +51,7 @@ export default function AddExpenseScreen() {
   }, [id, api]);
 
   const amountNumber = useMemo(() => parseFloat(amount.replace(',', '.')) || 0, [amount]);
+  const amountCents = useMemo(() => toCents(amount), [amount]);
 
   const splitTotal = useMemo(() => {
     if (!group || method === 'equal') return 0;
@@ -65,18 +66,21 @@ export default function AddExpenseScreen() {
     if (!desc.trim()) return setError(t('addExpense.descriptionRequired'));
     if (amountNumber <= 0) return setError(t('addExpense.amountPositive'));
 
+    // Fixed split values are sent as cents; percentage values stay percentages.
     let splits: { user_id: number; value: number }[];
     if (method === 'equal') {
       splits = group.members.map((m) => ({ user_id: m.id, value: 0 }));
+    } else if (method === 'fixed') {
+      splits = group.members.map((m) => ({ user_id: m.id, value: toCents(values[m.id] ?? '') }));
+      if (Math.abs(splitTotal - amountNumber) > 0.01)
+        return setError(t('addExpense.amountsMustTotal', { amount: formatAmount(amountCents) }));
     } else {
       splits = group.members.map((m) => ({
         user_id: m.id,
         value: parseFloat((values[m.id] ?? '').replace(',', '.')) || 0,
       }));
-      if (method === 'percentage' && Math.abs(splitTotal - 100) > 0.01)
+      if (Math.abs(splitTotal - 100) > 0.01)
         return setError(t('addExpense.percentagesMustTotal'));
-      if (method === 'fixed' && Math.abs(splitTotal - amountNumber) > 0.01)
-        return setError(t('addExpense.amountsMustTotal', { amount: formatAmount(amountNumber) }));
     }
 
     setSubmitting(true);
@@ -86,7 +90,7 @@ export default function AddExpenseScreen() {
         group_id: group.id,
         paid_by_id: paidBy,
         description: desc.trim(),
-        amount: amountNumber,
+        amount: amountCents,
         split_method: method,
         splits,
       });
@@ -210,7 +214,9 @@ export default function AddExpenseScreen() {
           {/* split rows */}
           <View style={styles.splitCard}>
             {group.members.map((m) => {
-              const equalShare = group.members.length ? amountNumber / group.members.length : 0;
+              const equalShare = group.members.length
+                ? Math.round(amountCents / group.members.length)
+                : 0;
               return (
                 <View key={m.id} style={styles.splitRow}>
                   <View style={[styles.rowAvatar, { backgroundColor: avatarColor(m.id) }]}>
@@ -240,7 +246,7 @@ export default function AddExpenseScreen() {
               <View style={styles.splitHint}>
                 <Text style={styles.splitHintLabel}>{t('addExpense.splitTotal')}</Text>
                 <Text style={styles.splitHintValue}>
-                  {method === 'percentage' ? `${splitTotal}%` : formatAmount(splitTotal)}
+                  {method === 'percentage' ? `${splitTotal}%` : formatAmount(Math.round(splitTotal * 100))}
                 </Text>
               </View>
             )}

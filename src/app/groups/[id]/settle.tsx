@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
-import { formatAmount, t } from '@/lib/i18n';
+import { formatAmount, fromCents, t, toCents } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
 
 export default function SettleScreen() {
@@ -24,8 +24,9 @@ export default function SettleScreen() {
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
-  const maxAmount = useMemo(() => parseFloat(amount ?? '0') || 0, [amount]);
-  const [value, setValue] = useState(amount ?? '');
+  // The `amount` param arrives in cents (the debt amount from the balances).
+  const maxAmount = useMemo(() => parseInt(amount ?? '0', 10) || 0, [amount]);
+  const [value, setValue] = useState(() => fromCents(parseInt(amount ?? '0', 10) || 0));
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -33,9 +34,9 @@ export default function SettleScreen() {
   const tName = toName ?? t('groupDetail.userN', { id: to });
 
   const confirm = async () => {
-    const paid = parseFloat(value.replace(',', '.')) || 0;
+    const paid = toCents(value);
     if (paid <= 0) return setError(t('settle.amountPositive'));
-    if (paid > maxAmount + 0.01)
+    if (paid > maxAmount)
       return setError(t('settle.amountTooHigh', { max: formatAmount(maxAmount) }));
 
     setSubmitting(true);

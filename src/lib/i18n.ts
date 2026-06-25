@@ -308,19 +308,29 @@ export function t(key: string, options?: Record<string, unknown>): string {
   return i18n.t(key, options);
 }
 
-/** Formats a monetary amount with locale-aware grouping/decimals, prefixed with "$". */
-export function formatAmount(amount: number): string {
+/** Formats a monetary amount (in integer cents) with locale-aware grouping, prefixed with "$". */
+export function formatAmount(cents: number): string {
   const numberLocale = i18n.locale === 'es' ? 'es-AR' : 'en-US';
   return `$${new Intl.NumberFormat(numberLocale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount)}`;
+  }).format(cents / 100)}`;
 }
 
-/** Formats an amount with an explicit sign (used for balances). */
-export function formatSigned(amount: number): string {
-  const sign = amount > 0 ? '+' : amount < 0 ? '−' : '';
-  return `${sign}${formatAmount(Math.abs(amount))}`;
+/** Formats a cents amount with an explicit sign (used for balances). */
+export function formatSigned(cents: number): string {
+  const sign = cents > 0 ? '+' : cents < 0 ? '−' : '';
+  return `${sign}${formatAmount(Math.abs(cents))}`;
+}
+
+/** Parses a user-typed dollar string (e.g. "10.50") into integer cents. */
+export function toCents(input: string): number {
+  return Math.round((parseFloat(input.replace(',', '.')) || 0) * 100);
+}
+
+/** Renders integer cents as a plain dollar string for prefilling a text input. */
+export function fromCents(cents: number): string {
+  return cents ? String(cents / 100) : '';
 }
 
 export { i18n };

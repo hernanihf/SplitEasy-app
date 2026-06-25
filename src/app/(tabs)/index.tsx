@@ -111,8 +111,8 @@ export default function HomeScreen() {
 
           <View style={styles.groupList}>
             {groups.map((g) => {
-              const owed = g.your_balance > 0.01;
-              const owe = g.your_balance < -0.01;
+              const owed = g.your_balance > 0;
+              const owe = g.your_balance < 0;
               const color = owed ? Palette.green : owe ? Palette.red : Palette.muted;
               const word = owed
                 ? t('home.wordOwed')
