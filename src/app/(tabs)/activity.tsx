@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, avatarColor, initial, type ThemeColors } from '@/constants/design';
+import { Font, expenseEmoji, initial, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, i18n, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -57,10 +57,13 @@ export default function ActivityScreen() {
           <View style={styles.list}>
             {events.map((ev, i) => {
               const settlement = ev.type === 'settlement';
+              const emoji = settlement ? '💸' : expenseEmoji(ev.title);
               return (
                 <View key={i} style={styles.row}>
-                  <View style={[styles.avatar, { backgroundColor: avatarColor(ev.actor_id) }]}>
-                    <Text style={styles.avatarText}>{initial(ev.actor_name)}</Text>
+                  <View style={[styles.tile, { backgroundColor: tileBg(ev.title) }]}>
+                    <Text style={emoji ? styles.tileEmoji : styles.tileInitial}>
+                      {emoji ?? initial(ev.title)}
+                    </Text>
                   </View>
                   <View style={styles.info}>
                     <Text style={styles.rowTitle} numberOfLines={1}>
@@ -111,8 +114,9 @@ const makeStyles = (Palette: ThemeColors) =>
     borderBottomWidth: 1,
     borderBottomColor: Palette.cardBorder,
   },
-  avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontFamily: Font.sansSemibold, fontSize: 14 },
+  tile: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  tileEmoji: { fontSize: 18 },
+  tileInitial: { color: Palette.ink, fontFamily: Font.sansSemibold, fontSize: 15 },
   info: { flex: 1, minWidth: 0 },
   rowTitle: { fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
   rowSub: { marginTop: 2, fontSize: 12, color: Palette.muted },
