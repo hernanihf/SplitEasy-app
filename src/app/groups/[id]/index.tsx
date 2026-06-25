@@ -24,9 +24,22 @@ type Expense = {
   amount: number;
   paid_by: { id: number; name: string };
   splits: { user_id: number; amount: number }[];
+  created_at: string;
+};
+
+type Settlement = {
+  id: number;
+  from_user_id: number;
+  to_user_id: number;
+  amount: number;
+  created_at: string;
 };
 
 type Debt = { from_user_id: number; to_user_id: number; amount: number };
+
+type HistoryItem =
+  | { kind: 'expense'; date: string; expense: Expense }
+  | { kind: 'payment'; date: string; settlement: Settlement };
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,9 +49,10 @@ export default function GroupDetailScreen() {
 
   const [group, setGroup] = useState<Group | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [myId, setMyId] = useState<number | null>(null);
-  const [tab, setTab] = useState<'expenses' | 'balances'>('expenses');
+  const [tab, setTab] = useState<'history' | 'balances'>('history');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -52,12 +66,14 @@ export default function GroupDetailScreen() {
     Promise.all([
       api.get<Group>(`/api/v1/groups/${id}`),
       api.get<Expense[]>(`/api/v1/groups/${id}/expenses`),
+      api.get<Settlement[]>(`/api/v1/groups/${id}/settlements`),
       api.get<Debt[]>(`/api/v1/groups/${id}/balances`),
       api.get<{ id: number }>('/api/v1/users/me'),
     ])
-      .then(([g, ex, d, me]) => {
+      .then(([g, ex, st, d, me]) => {
         setGroup(g);
         setExpenses(ex ?? []);
+        setSettlements(st ?? []);
         setDebts(d ?? []);
         setMyId(me.id);
       })
@@ -104,6 +120,15 @@ export default function GroupDetailScreen() {
     (uid: number) => group?.members.find((m) => m.id === uid)?.avatar_url ?? '',
     [group],
   );
+
+  // Unified history: expenses and payments interleaved, newest first.
+  const history = useMemo<HistoryItem[]>(() => {
+    const items: HistoryItem[] = [
+      ...expenses.map((e) => ({ kind: 'expense' as const, date: e.created_at, expense: e })),
+      ...settlements.map((s) => ({ kind: 'payment' as const, date: s.created_at, settlement: s })),
+    ];
+    return items.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  }, [expenses, settlements]);
 
   const handleShare = useCallback(async () => {
     let url = inviteUrl;
@@ -218,10 +243,10 @@ export default function GroupDetailScreen() {
           {/* tabs */}
           <View style={styles.tabs}>
             <Pressable
-              onPress={() => setTab('expenses')}
-              style={[styles.tab, tab === 'expenses' && styles.tabActive]}>
-              <Text style={[styles.tabText, tab === 'expenses' && styles.tabTextActive]}>
-                {t('groupDetail.expenses')}
+              onPress={() => setTab('history')}
+              style={[styles.tab, tab === 'history' && styles.tabActive]}>
+              <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>
+                {t('groupDetail.history')}
               </Text>
             </Pressable>
             <Pressable
@@ -233,14 +258,41 @@ export default function GroupDetailScreen() {
             </Pressable>
           </View>
 
-          {tab === 'expenses' && (
+          {tab === 'history' && (
             <View style={styles.list}>
-              {expenses.length === 0 && <Text style={styles.muted}>{t('groupDetail.allSettledHint')}</Text>}
-              {expenses.map((ex) => {
+              {history.length === 0 && <Text style={styles.muted}>{t('groupDetail.historyEmpty')}</Text>}
+              {history.map((item) => {
+                if (item.kind === 'payment') {
+                  const s = item.settlement;
+                  return (
+                    <View key={`s${s.id}`} style={styles.expenseCard}>
+                      <View style={[styles.smallAvatar, { backgroundColor: Palette.greenTint }]}>
+                        <Text style={styles.expenseEmoji}>💸</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.expenseDesc} numberOfLines={1}>
+                          {t('groupDetail.paymentTitle')}
+                        </Text>
+                        <Text style={styles.expenseMeta} numberOfLines={1}>
+                          {t('groupDetail.paidFromTo', {
+                            from: memberName(s.from_user_id),
+                            to: memberName(s.to_user_id),
+                          })}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={[styles.expenseAmount, { color: Palette.green }]}>
+                          {formatAmount(s.amount)}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                }
+                const ex = item.expense;
                 const myShare = ex.splits?.find((s) => s.user_id === myId)?.amount;
                 const emoji = expenseEmoji(ex.description);
                 return (
-                  <View key={ex.id} style={styles.expenseCard}>
+                  <View key={`e${ex.id}`} style={styles.expenseCard}>
                     <View style={[styles.smallAvatar, { backgroundColor: tileBg(ex.description) }]}>
                       <Text style={emoji ? styles.expenseEmoji : styles.expenseInitial}>
                         {emoji ?? initial(ex.description)}
