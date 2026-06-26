@@ -148,7 +148,7 @@ export default function AddExpenseScreen() {
 
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           {/* amount */}
-          <View style={styles.amountWrap}>
+          <View style={styles.amountCard}>
             <Text style={styles.amountLabel}>{t('addExpense.amountIn', { group: group.name })}</Text>
             <View style={styles.amountRow}>
               <Text style={styles.dollar}>$</Text>
@@ -157,7 +157,9 @@ export default function AddExpenseScreen() {
                 onChangeText={setAmount}
                 keyboardType="decimal-pad"
                 placeholder="0"
-                placeholderTextColor="#C8D0CB"
+                placeholderTextColor={Palette.muted}
+                underlineColorAndroid="transparent"
+                selectionColor={Palette.green}
                 style={styles.amountInput}
               />
             </View>
@@ -314,8 +316,15 @@ const makeStyles = (Palette: ThemeColors) =>
   },
   topTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
   scroll: { paddingHorizontal: 20, paddingBottom: 24 },
-  amountWrap: { alignItems: 'center', paddingVertical: 14 },
-  amountLabel: { fontSize: 12.5, color: Palette.muted, fontFamily: Font.sansMedium, marginBottom: 6 },
+  amountCard: {
+    alignItems: 'center',
+    paddingVertical: 22,
+    marginTop: 4,
+    marginBottom: 8,
+    backgroundColor: Palette.inputBg,
+    borderRadius: Radius.lg,
+  },
+  amountLabel: { fontSize: 12.5, color: Palette.muted, fontFamily: Font.sansMedium, marginBottom: 8 },
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   dollar: { fontFamily: Font.monoSemibold, fontSize: 30, color: Palette.ink },
   amountInput: {
@@ -326,7 +335,9 @@ const makeStyles = (Palette: ThemeColors) =>
     color: Palette.ink,
     textAlign: 'center',
     padding: 0,
-  },
+    // Web/PWA: drop the browser's focus outline on the <input>.
+    outlineStyle: 'none',
+  } as object,
   card: {
     backgroundColor: Palette.card,
     borderWidth: 1,
