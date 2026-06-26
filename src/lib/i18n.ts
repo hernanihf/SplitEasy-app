@@ -76,7 +76,8 @@ const translations = {
       wordOwed: "you're owed",
       wordSettled: "you're all settled",
       paidBy: 'Paid by %{name}',
-      yourShare: 'your share %{amount}',
+      youLent: 'You lent %{amount}',
+      youOwe: 'You owe %{amount}',
     },
     join: {
       joining: 'Joining the group…',
@@ -218,7 +219,8 @@ const translations = {
       wordOwed: 'te deben',
       wordSettled: 'estás al día',
       paidBy: 'Pagó %{name}',
-      yourShare: 'te toca %{amount}',
+      youLent: 'Prestaste %{amount}',
+      youOwe: 'Debés %{amount}',
     },
     join: {
       joining: 'Uniéndote al grupo…',

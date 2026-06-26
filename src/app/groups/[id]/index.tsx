@@ -289,7 +289,11 @@ export default function GroupDetailScreen() {
                   );
                 }
                 const ex = item.expense;
-                const myShare = ex.splits?.find((s) => s.user_id === myId)?.amount;
+                const myShare = ex.splits?.find((s) => s.user_id === myId)?.amount ?? 0;
+                const paidByMe = ex.paid_by.id === myId;
+                // When I paid, the useful number is what others owe me (total minus
+                // my own share); otherwise it's what I owe.
+                const lent = ex.amount - myShare;
                 const emoji = expenseEmoji(ex.description);
                 return (
                   <View key={`e${ex.id}`} style={styles.expenseCard}>
@@ -308,11 +312,15 @@ export default function GroupDetailScreen() {
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                       <Text style={styles.expenseAmount}>{formatAmount(ex.amount)}</Text>
-                      {myShare != null && (
-                        <Text style={styles.expenseShare}>
-                          {t('groupDetail.yourShare', { amount: formatAmount(myShare) })}
+                      {paidByMe && lent > 0 ? (
+                        <Text style={[styles.expenseShare, { color: Palette.green }]}>
+                          {t('groupDetail.youLent', { amount: formatAmount(lent) })}
                         </Text>
-                      )}
+                      ) : !paidByMe && myShare > 0 ? (
+                        <Text style={[styles.expenseShare, { color: Palette.red }]}>
+                          {t('groupDetail.youOwe', { amount: formatAmount(myShare) })}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
                 );
