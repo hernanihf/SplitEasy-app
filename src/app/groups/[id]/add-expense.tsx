@@ -12,12 +12,13 @@ import { formatAmount, t, toCents } from '@/lib/i18n';
 import { assetToFile, scanReceiptFile } from '@/lib/receipt-scan';
 import type { Group } from '@/app/groups/[id]/index';
 
-type SplitMethod = 'equal' | 'fixed' | 'percentage';
+type SplitMethod = 'equal' | 'fixed' | 'percentage' | 'shares';
 
 const METHODS: { value: SplitMethod; key: string }[] = [
   { value: 'equal', key: 'addExpense.methodEqual' },
   { value: 'fixed', key: 'addExpense.methodFixed' },
   { value: 'percentage', key: 'addExpense.methodPercentage' },
+  { value: 'shares', key: 'addExpense.methodShares' },
 ];
 
 export default function AddExpenseScreen() {
@@ -99,13 +100,19 @@ export default function AddExpenseScreen() {
       splits = group.members.map((m) => ({ user_id: m.id, value: toCents(values[m.id] ?? '') }));
       if (Math.abs(splitTotal - amountNumber) > 0.01)
         return setError(t('addExpense.amountsMustTotal', { amount: formatAmount(amountCents) }));
-    } else {
+    } else if (method === 'percentage') {
       splits = group.members.map((m) => ({
         user_id: m.id,
         value: parseFloat((values[m.id] ?? '').replace(',', '.')) || 0,
       }));
       if (Math.abs(splitTotal - 100) > 0.01)
         return setError(t('addExpense.percentagesMustTotal'));
+    } else {
+      // shares: weights, sent only for members who actually participated
+      splits = group.members
+        .map((m) => ({ user_id: m.id, value: parseFloat((values[m.id] ?? '').replace(',', '.')) || 0 }))
+        .filter((s) => s.value > 0);
+      if (splits.length === 0) return setError(t('addExpense.sharesRequired'));
     }
 
     setSubmitting(true);
@@ -233,7 +240,9 @@ export default function AddExpenseScreen() {
                   key={mth.value}
                   onPress={() => setMethod(mth.value)}
                   style={[styles.segmentBtn, active && styles.segmentBtnActive]}>
-                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.segmentText, active && styles.segmentTextActive]}>
                     {t(mth.key)}
                   </Text>
                 </Pressable>
@@ -267,6 +276,7 @@ export default function AddExpenseScreen() {
                         style={styles.rowInput}
                       />
                       {method === 'percentage' && <Text style={styles.rowSuffix}>%</Text>}
+                      {method === 'shares' && <Text style={styles.rowSuffix}>×</Text>}
                     </View>
                   )}
                 </View>
@@ -276,7 +286,11 @@ export default function AddExpenseScreen() {
               <View style={styles.splitHint}>
                 <Text style={styles.splitHintLabel}>{t('addExpense.splitTotal')}</Text>
                 <Text style={styles.splitHintValue}>
-                  {method === 'percentage' ? `${splitTotal}%` : formatAmount(Math.round(splitTotal * 100))}
+                  {method === 'percentage'
+                    ? `${splitTotal}%`
+                    : method === 'shares'
+                      ? `${splitTotal} ${t('addExpense.sharesUnit')}`
+                      : formatAmount(Math.round(splitTotal * 100))}
                 </Text>
               </View>
             )}
