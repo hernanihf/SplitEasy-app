@@ -40,6 +40,15 @@ export default function Root({ children }: PropsWithChildren) {
           }}
         />
 
+        {/* Match native: drop the browser's focus outline on inputs (the app
+            draws its own field styling). Otherwise focused inputs show a white
+            rectangle in the standalone PWA. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: 'input, textarea { outline: none; }',
+          }}
+        />
+
         {/*
           Disable body scrolling on web to match the native ScrollView behavior.
           Remove if you want to allow the body to scroll.
