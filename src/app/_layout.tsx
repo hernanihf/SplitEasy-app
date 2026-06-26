@@ -15,7 +15,7 @@ import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
-import { LightColors } from '@/constants/design';
+import { AppLoading } from '@/components/app-loading';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { SettingsProvider, useSettings } from '@/lib/settings';
 
@@ -41,7 +41,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [token, isLoading, segments]);
 
-  if (isLoading) return null;
+  if (isLoading) return <AppLoading />;
 
   return children;
 }
@@ -49,7 +49,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function ThemedShell() {
   const { ready, colors, scheme, language } = useSettings();
   if (!ready) {
-    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+    return <AppLoading />;
   }
   return (
     <View style={{ flex: 1, backgroundColor: colors.canvas, alignItems: 'center' }}>
@@ -85,7 +85,7 @@ export default function RootLayout() {
   });
 
   if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: LightColors.bg }} />;
+    return <AppLoading />;
   }
 
   return (
