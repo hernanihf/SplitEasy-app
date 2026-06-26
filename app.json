@@ -26,7 +26,7 @@
       "shortName": "SplitEasy",
       "lang": "en",
       "themeColor": "#0E7C5A",
-      "backgroundColor": "#F6F7F6",
+      "backgroundColor": "#0F1A16",
       "display": "standalone",
       "startUrl": "/",
       "bundler": "metro"
