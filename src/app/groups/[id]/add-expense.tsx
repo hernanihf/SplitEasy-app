@@ -55,6 +55,19 @@ export default function AddExpenseScreen() {
     setError(null);
     try {
       const prefill = await scanReceiptFile(api, file.uri, file.name, file.mimeType);
+      if (prefill.items.length > 0) {
+        // Detected line items → go assign them per member.
+        router.replace({
+          pathname: '/groups/[id]/itemize',
+          params: {
+            id: id as string,
+            description: prefill.description,
+            total: String(prefill.totalCents),
+            items: JSON.stringify(prefill.items),
+          },
+        });
+        return;
+      }
       setDesc(prefill.description);
       setAmount(prefill.amount);
       setScanned(true);

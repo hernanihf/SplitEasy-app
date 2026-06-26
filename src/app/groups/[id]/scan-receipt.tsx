@@ -27,6 +27,18 @@ export default function ScanReceiptScreen() {
     setError(null);
     try {
       const prefill = await scanReceiptFile(api, uri, name, mimeType);
+      if (prefill.items.length > 0) {
+        router.replace({
+          pathname: '/groups/[id]/itemize',
+          params: {
+            id: id as string,
+            description: prefill.description,
+            total: String(prefill.totalCents),
+            items: JSON.stringify(prefill.items),
+          },
+        });
+        return;
+      }
       router.replace({
         pathname: '/groups/[id]/add-expense',
         params: { id: id as string, description: prefill.description, amount: prefill.amount },
