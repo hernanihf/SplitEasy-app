@@ -125,16 +125,19 @@ function hashString(s: string): number {
 
 export const GROUP_EMOJIS = ['🏔️', '🏠', '🔥', '✈️', '🍽️', '🎉', '⚽', '🏖️', '🚗', '💸'];
 
+// A generic "expense" icon, used when a description doesn't match any keyword.
+export const DEFAULT_EXPENSE_EMOJI = '🧾';
+
 // Maps an expense description to a related emoji by keyword (English + Spanish).
-// Most specific keywords first; returns null when nothing matches so the caller
-// can fall back to the expense's initial.
+// Most specific keywords first.
 const EXPENSE_EMOJI: { emoji: string; words: string[] }[] = [
   { emoji: '🚕', words: ['taxi', 'uber', 'cab', 'cabify', 'didi', 'remis', 'ride'] },
   { emoji: '🎉', words: ['disco', 'club', 'party', 'fiesta', 'boliche', 'nightclub'] },
   { emoji: '🍻', words: ['bar', 'beer', 'birra', 'cerveza', 'drink', 'trago', 'pub', 'pint'] },
   { emoji: '🍷', words: ['wine', 'vino'] },
   { emoji: '☕', words: ['coffee', 'cafe', 'café', 'starbucks'] },
-  { emoji: '🛒', words: ['grocery', 'groceries', 'market', 'super', 'súper', 'mercado', 'almacen', 'almacén', 'compras'] },
+  { emoji: '🥩', words: ['meat', 'butcher', 'carne', 'carnicería', 'carniceria', 'asado', 'parrilla'] },
+  { emoji: '🛒', words: ['grocery', 'groceries', 'market', 'super', 'súper', 'mercado', 'almacen', 'almacén', 'compras', 'verduleria', 'verdulería'] },
   { emoji: '🍔', words: ['food', 'eat', 'lunch', 'dinner', 'breakfast', 'meal', 'comida', 'almuerzo', 'cena', 'desayuno', 'resto', 'restaurant', 'restaurante', 'burger', 'pizza', 'sushi'] },
   { emoji: '⛽', words: ['gas', 'fuel', 'nafta', 'combustible', 'gasolina'] },
   { emoji: '✈️', words: ['flight', 'plane', 'avion', 'avión', 'vuelo', 'airline', 'aerolinea', 'aerolínea'] },
@@ -147,14 +150,15 @@ const EXPENSE_EMOJI: { emoji: string; words: string[] }[] = [
   { emoji: '🎮', words: ['game', 'games', 'juego', 'gaming', 'playstation', 'xbox'] },
   { emoji: '🏠', words: ['rent', 'alquiler', 'renta', 'house', 'casa'] },
   { emoji: '🎁', words: ['gift', 'regalo', 'present'] },
-  { emoji: '🧾', words: ['bill', 'factura', 'expensas', 'utilities', 'luz', 'internet', 'wifi', 'agua', 'water'] },
+  { emoji: '💡', words: ['bill', 'factura', 'expensas', 'utilities', 'luz', 'internet', 'wifi', 'agua', 'water'] },
 ];
 
-export function expenseEmoji(description: string | undefined | null): string | null {
+// Returns a related emoji for the description, falling back to a generic expense
+// icon so a row is never left without one.
+export function expenseEmoji(description: string | undefined | null): string {
   const text = (description ?? '').toLowerCase();
-  if (!text.trim()) return null;
   for (const { emoji, words } of EXPENSE_EMOJI) {
     if (words.some((w) => text.includes(w))) return emoji;
   }
-  return null;
+  return DEFAULT_EXPENSE_EMOJI;
 }

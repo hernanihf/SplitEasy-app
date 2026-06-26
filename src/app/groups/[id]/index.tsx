@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
-import { Font, Radius, avatarColor, expenseEmoji, initial, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, Radius, avatarColor, expenseEmoji, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -298,9 +298,7 @@ export default function GroupDetailScreen() {
                 return (
                   <View key={`e${ex.id}`} style={styles.expenseCard}>
                     <View style={[styles.smallAvatar, { backgroundColor: tileBg(ex.description) }]}>
-                      <Text style={emoji ? styles.expenseEmoji : styles.expenseInitial}>
-                        {emoji ?? initial(ex.description)}
-                      </Text>
+                      <Text style={styles.expenseEmoji}>{emoji}</Text>
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={styles.expenseDesc} numberOfLines={1}>
@@ -475,7 +473,6 @@ const makeStyles = (Palette: ThemeColors) =>
   },
   smallAvatar: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   expenseEmoji: { fontSize: 19 },
-  expenseInitial: { color: Palette.ink, fontFamily: Font.sansSemibold, fontSize: 16 },
   expenseDesc: { fontSize: 14.5, fontFamily: Font.sansSemibold, color: Palette.ink },
   expenseMeta: { marginTop: 3, fontSize: 12, color: Palette.muted },
   expenseAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink },
