@@ -18,12 +18,20 @@ export type Group = {
   members: { id: number; name: string; avatar_url?: string | null }[];
 };
 
-type Expense = {
+type ExpenseItem = {
+  id: number;
+  description: string;
+  amount: number;
+  users: { id: number; name: string; avatar_url?: string | null }[];
+};
+
+export type Expense = {
   id: number;
   description: string;
   amount: number;
   paid_by: { id: number; name: string };
   splits: { user_id: number; amount: number }[];
+  items?: ExpenseItem[];
   created_at: string;
 };
 
@@ -296,7 +304,15 @@ export default function GroupDetailScreen() {
                 const lent = ex.amount - myShare;
                 const emoji = expenseEmoji(ex.description);
                 return (
-                  <View key={`e${ex.id}`} style={styles.expenseCard}>
+                  <Pressable
+                    key={`e${ex.id}`}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/groups/[id]/expense-detail',
+                        params: { id: id as string, expense: JSON.stringify(ex) },
+                      })
+                    }
+                    style={({ pressed }) => [styles.expenseCard, pressed && styles.pressed]}>
                     <View style={[styles.smallAvatar, { backgroundColor: tileBg(ex.description) }]}>
                       <Text style={styles.expenseEmoji}>{emoji}</Text>
                     </View>
@@ -320,7 +336,7 @@ export default function GroupDetailScreen() {
                         </Text>
                       ) : null}
                     </View>
-                  </View>
+                  </Pressable>
                 );
               })}
             </View>

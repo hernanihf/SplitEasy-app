@@ -134,6 +134,11 @@ const translations = {
       confirm: 'Add expense',
       assignAll: 'Every item needs at least one person.',
     },
+    expenseDetail: {
+      title: 'Expense detail',
+      split: 'How it was split',
+      items: 'Items',
+    },
     auth: { signingIn: 'Signing in…' },
     newGroup: {
       title: 'New group',
@@ -290,6 +295,11 @@ const translations = {
       perPerson: 'Por persona',
       confirm: 'Agregar gasto',
       assignAll: 'Cada ítem necesita al menos una persona.',
+    },
+    expenseDetail: {
+      title: 'Detalle del gasto',
+      split: 'Cómo se dividió',
+      items: 'Ítems',
     },
     auth: { signingIn: 'Iniciando sesión…' },
     newGroup: {
