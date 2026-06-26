@@ -1,6 +1,7 @@
+import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
@@ -8,6 +9,7 @@ import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constant
 import { useAuth } from '@/lib/auth';
 import { useColors } from '@/lib/settings';
 import { formatAmount, t, toCents } from '@/lib/i18n';
+import { assetToFile, scanReceiptFile } from '@/lib/receipt-scan';
 import type { Group } from '@/app/groups/[id]/index';
 
 type SplitMethod = 'equal' | 'fixed' | 'percentage';
@@ -36,8 +38,31 @@ export default function AddExpenseScreen() {
   const [values, setValues] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanned, setScanned] = useState(!!(prefillDesc || prefillAmount));
 
-  const scanned = !!(prefillDesc || prefillAmount);
+  // "Scan" opens the camera directly and fills the form in place — no detour
+  // through the scan-receipt screen. That screen is only for the "Upload" flow.
+  const scanFromCamera = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) return setError(t('scanReceipt.cameraPermission'));
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    if (result.canceled) return;
+
+    const file = assetToFile(result.assets[0]);
+    setScanning(true);
+    setError(null);
+    try {
+      const prefill = await scanReceiptFile(api, file.uri, file.name, file.mimeType);
+      setDesc(prefill.description);
+      setAmount(prefill.amount);
+      setScanned(true);
+    } catch {
+      setError(t('scanReceipt.readError'));
+    } finally {
+      setScanning(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -140,7 +165,12 @@ export default function AddExpenseScreen() {
 
           {/* receipt scan */}
           <View style={styles.card}>
-            {scanned ? (
+            {scanning ? (
+              <View style={styles.scannedRow}>
+                <ActivityIndicator color={Palette.green} />
+                <Text style={styles.scannedText}>{t('scanReceipt.reading')}</Text>
+              </View>
+            ) : scanned ? (
               <View style={styles.scannedRow}>
                 <View style={styles.scannedIcon}>
                   <Text style={styles.scannedCheck}>✓</Text>
@@ -149,9 +179,7 @@ export default function AddExpenseScreen() {
               </View>
             ) : (
               <View style={styles.scanRow}>
-                <Pressable
-                  onPress={() => router.push(`/groups/${id}/scan-receipt?source=camera`)}
-                  style={styles.scanBtn}>
+                <Pressable onPress={scanFromCamera} style={styles.scanBtn}>
                   <Text style={styles.scanBtnText}>{t('addExpense.scan')}</Text>
                 </Pressable>
                 <Pressable
