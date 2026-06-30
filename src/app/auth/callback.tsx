@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Font, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
@@ -11,18 +11,29 @@ import { useColors } from '@/lib/settings';
 // intercepts the URL before it renders, but we keep this screen so deep links
 // opened outside that flow still resolve.
 export default function AuthCallbackScreen() {
-  const { token } = useLocalSearchParams<{ token?: string }>();
+  // The backend puts the token in the URL fragment (#token=...), not a query
+  // param, so it never reaches server/proxy access logs. expo-router's
+  // search-param parsing only covers the query string, so the fragment has
+  // to be read straight off window.location on web. The query-param fallback
+  // covers any link still pointing at the old scheme.
+  const { token: queryToken } = useLocalSearchParams<{ token?: string }>();
   const { signIn } = useAuth();
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
   useEffect(() => {
-    if (typeof token === 'string') {
+    const hashToken =
+      Platform.OS === 'web' && typeof window !== 'undefined' && window.location.hash
+        ? new URLSearchParams(window.location.hash.slice(1)).get('token')
+        : null;
+    const token = hashToken ?? (typeof queryToken === 'string' ? queryToken : null);
+
+    if (token) {
       signIn(token).then(() => router.replace('/'));
     } else {
       router.replace('/login');
     }
-  }, [token]);
+  }, [queryToken]);
 
   return (
     <View style={styles.root}>
