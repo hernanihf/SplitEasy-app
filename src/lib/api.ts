@@ -12,7 +12,7 @@ export class ApiError extends Error {
 
 type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown };
 
-export function createApiClient(getToken: () => string | null) {
+export function createApiClient(getToken: () => string | null, onUnauthorized?: () => void) {
   async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const token = getToken();
     const headers: Record<string, string> = {
@@ -30,6 +30,7 @@ export function createApiClient(getToken: () => string | null) {
     });
 
     if (!response.ok) {
+      if (response.status === 401) onUnauthorized?.();
       const text = await response.text();
       throw new ApiError(response.status, text || response.statusText);
     }
@@ -55,6 +56,7 @@ export function createApiClient(getToken: () => string | null) {
     });
 
     if (!response.ok) {
+      if (response.status === 401) onUnauthorized?.();
       const text = await response.text();
       throw new ApiError(response.status, text || response.statusText);
     }

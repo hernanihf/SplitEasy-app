@@ -39,7 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
   };
 
-  const api = useMemo(() => createApiClient(() => token), [token]);
+  // On a 401 (expired/invalid token) clear it so the AuthGate sends the user
+  // back to login instead of leaving them stuck on an empty screen.
+  const api = useMemo(
+    () =>
+      createApiClient(
+        () => token,
+        () => {
+          void removeItem(TOKEN_KEY);
+          setToken(null);
+        },
+      ),
+    [token],
+  );
 
   return (
     <AuthContext.Provider value={{ token, isLoading, signIn, signOut, api }}>
