@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Font, expenseEmoji, tileBg, type ThemeColors } from '@/constants/design';
@@ -31,15 +31,18 @@ function shortDate(iso: string): string {
 export default function ActivityScreen() {
   const { api } = useAuth();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
   useFocusEffect(
     useCallback(() => {
+      setIsLoading(true);
       api
         .get<ActivityEvent[]>('/api/v1/activity')
         .then((data) => setEvents(data ?? []))
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
     }, [api]),
   );
 
@@ -52,7 +55,15 @@ export default function ActivityScreen() {
             <Text style={styles.subtitle}>{t('activity.subtitle')}</Text>
           </View>
 
-          {events.length === 0 && <Text style={styles.empty}>{t('activity.empty')}</Text>}
+          {isLoading && events.length === 0 && (
+            <View style={styles.loading}>
+              <ActivityIndicator color={Palette.green} />
+            </View>
+          )}
+
+          {!isLoading && events.length === 0 && (
+            <Text style={styles.empty}>{t('activity.empty')}</Text>
+          )}
 
           <View style={styles.list}>
             {events.map((ev, i) => {
@@ -104,6 +115,7 @@ const makeStyles = (Palette: ThemeColors) =>
   title: { fontSize: 24, fontFamily: Font.sansBold, letterSpacing: -0.6, color: Palette.ink },
   subtitle: { marginTop: 3, fontSize: 13.5, color: Palette.muted },
   empty: { paddingHorizontal: 24, paddingTop: 24, color: Palette.muted, fontSize: 14 },
+  loading: { paddingTop: 32, alignItems: 'center' },
   list: { paddingHorizontal: 20, paddingTop: 18 },
   row: {
     flexDirection: 'row',

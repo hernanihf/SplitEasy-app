@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
@@ -32,13 +32,16 @@ export default function HomeScreen() {
   const [name, setName] = useState<string>(t('profile.anonymous'));
   const [avatar, setAvatar] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const load = useCallback(() => {
     setError(null);
+    setIsLoading(true);
     api
       .get<HomeData>('/api/v1/home')
       .then(setHome)
-      .catch(() => setError(t('home.loadError')));
+      .catch(() => setError(t('home.loadError')))
+      .finally(() => setIsLoading(false));
     api
       .get<{ name: string; avatar_url: string }>('/api/v1/users/me')
       .then((u) => {
@@ -102,7 +105,13 @@ export default function HomeScreen() {
 
           {error && <Text style={styles.error}>{error}</Text>}
 
-          {!error && groups.length === 0 && (
+          {isLoading && !home && (
+            <View style={styles.loading}>
+              <ActivityIndicator color={Palette.green} />
+            </View>
+          )}
+
+          {!isLoading && !error && groups.length === 0 && (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>{t('home.empty')}</Text>
               <Text style={styles.emptyHint}>{t('home.emptyHint')}</Text>
@@ -202,6 +211,7 @@ const makeStyles = (Palette: ThemeColors) =>
   groupsTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
   newGroup: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.green },
   error: { paddingHorizontal: 24, color: Palette.red, fontSize: 13 },
+  loading: { paddingTop: 32, alignItems: 'center' },
   empty: {
     marginHorizontal: 20,
     backgroundColor: Palette.card,
