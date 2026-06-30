@@ -10,15 +10,14 @@ import { useAuth } from '@/lib/auth';
 import { useColors } from '@/lib/settings';
 import { formatAmount, t, toCents } from '@/lib/i18n';
 import { assetToFile, scanReceiptFile } from '@/lib/receipt-scan';
-import { distributeCents } from '@/lib/split-math';
 import type { Group } from '@/app/groups/[id]/index';
 
-type SplitMethod = 'equal' | 'fixed' | 'shares';
+type SplitMethod = 'equal' | 'fixed' | 'percentage';
 
 const METHODS: { value: SplitMethod; key: string }[] = [
   { value: 'equal', key: 'addExpense.methodEqual' },
   { value: 'fixed', key: 'addExpense.methodFixed' },
-  { value: 'shares', key: 'addExpense.methodShares' },
+  { value: 'percentage', key: 'addExpense.methodPercentage' },
 ];
 
 export default function AddExpenseScreen() {
@@ -100,26 +99,12 @@ export default function AddExpenseScreen() {
     );
   }, [group, method, values]);
 
-  // For "shares", preview each member's resulting amount and % from their weight.
-  const shareResult = useMemo(() => {
-    const result: Record<number, { amount: number; pct: number }> = {};
-    if (method !== 'shares' || !group) return result;
-    const ids = group.members.map((m) => m.id);
-    const weights = ids.map((uid) => parseFloat((values[uid] ?? '').replace(',', '.')) || 0);
-    const totalW = weights.reduce((a, b) => a + b, 0);
-    const amounts = distributeCents(amountCents, weights);
-    ids.forEach((uid, i) => {
-      result[uid] = { amount: amounts[i], pct: totalW > 0 ? (weights[i] / totalW) * 100 : 0 };
-    });
-    return result;
-  }, [method, group, values, amountCents]);
-
   const submit = async () => {
     if (!group || !paidBy) return;
     if (!desc.trim()) return setError(t('addExpense.descriptionRequired'));
     if (amountNumber <= 0) return setError(t('addExpense.amountPositive'));
 
-    // Fixed split values are sent as cents; shares as relative weights.
+    // Fixed split values are sent as cents; percentage values stay percentages.
     let splits: { user_id: number; value: number }[];
     if (method === 'equal') {
       splits = group.members.map((m) => ({ user_id: m.id, value: 0 }));
@@ -128,11 +113,12 @@ export default function AddExpenseScreen() {
       if (Math.abs(splitTotal - amountNumber) > 0.01)
         return setError(t('addExpense.amountsMustTotal', { amount: formatAmount(amountCents) }));
     } else {
-      // shares: weights, sent only for members who actually participated
-      splits = group.members
-        .map((m) => ({ user_id: m.id, value: parseFloat((values[m.id] ?? '').replace(',', '.')) || 0 }))
-        .filter((s) => s.value > 0);
-      if (splits.length === 0) return setError(t('addExpense.sharesRequired'));
+      splits = group.members.map((m) => ({
+        user_id: m.id,
+        value: parseFloat((values[m.id] ?? '').replace(',', '.')) || 0,
+      }));
+      if (Math.abs(splitTotal - 100) > 0.01)
+        return setError(t('addExpense.percentagesMustTotal'));
     }
 
     setSubmitting(true);
@@ -284,11 +270,6 @@ export default function AddExpenseScreen() {
                   <Text style={styles.rowName} numberOfLines={1}>
                     {m.name}
                   </Text>
-                  {method === 'shares' && (shareResult[m.id]?.pct ?? 0) > 0 && (
-                    <Text style={styles.rowHint}>
-                      {formatAmount(shareResult[m.id].amount)} · {Math.round(shareResult[m.id].pct)}%
-                    </Text>
-                  )}
                   {method === 'equal' ? (
                     <Text style={styles.rowDisplay}>{formatAmount(equalShare)}</Text>
                   ) : (
@@ -302,7 +283,7 @@ export default function AddExpenseScreen() {
                         placeholderTextColor={Palette.muted}
                         style={styles.rowInput}
                       />
-                      {method === 'shares' && <Text style={styles.rowSuffix}>×</Text>}
+                      {method === 'percentage' && <Text style={styles.rowSuffix}>%</Text>}
                     </View>
                   )}
                 </View>
@@ -312,8 +293,8 @@ export default function AddExpenseScreen() {
               <View style={styles.splitHint}>
                 <Text style={styles.splitHintLabel}>{t('addExpense.splitTotal')}</Text>
                 <Text style={styles.splitHintValue}>
-                  {method === 'shares'
-                    ? `${splitTotal} ${t('addExpense.sharesUnit')}`
+                  {method === 'percentage'
+                    ? `${splitTotal}%`
                     : formatAmount(Math.round(splitTotal * 100))}
                 </Text>
               </View>
@@ -457,7 +438,6 @@ const makeStyles = (Palette: ThemeColors) =>
   rowAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   rowAvatarText: { color: '#fff', fontSize: 13, fontFamily: Font.sansSemibold },
   rowName: { flex: 1, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
-  rowHint: { fontSize: 12, fontFamily: Font.monoMedium, color: Palette.muted2, marginRight: 10 },
   rowDisplay: { fontFamily: Font.monoSemibold, fontSize: 14, color: Palette.ink },
   rowInputBox: {
     flexDirection: 'row',
