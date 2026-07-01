@@ -42,6 +42,7 @@ const translations = {
       empty: 'No activity yet.',
       paidBy: 'Paid by %{name} · %{group}',
       settledIn: 'in %{group}',
+      openError: 'Could not open that expense.',
     },
     profile: {
       title: 'Profile',
@@ -213,6 +214,7 @@ const translations = {
       empty: 'Todavía no hay actividad.',
       paidBy: 'Pagó %{name} · %{group}',
       settledIn: 'en %{group}',
+      openError: 'No se pudo abrir ese gasto.',
     },
     profile: {
       title: 'Perfil',
