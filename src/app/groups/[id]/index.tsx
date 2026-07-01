@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
@@ -316,8 +317,9 @@ export default function GroupDetailScreen() {
                         <Pressable
                           onPress={() => setDeletingSettlementId(s.id)}
                           hitSlop={8}
+                          accessibilityLabel={t('common.delete')}
                           style={styles.paymentDeleteBtn}>
-                          <Text style={styles.paymentDeleteBtnText}>✕</Text>
+                          <Feather name="trash-2" size={14} color={Palette.muted} />
                         </Pressable>
                       )}
                     </View>
@@ -536,7 +538,6 @@ const makeStyles = (Palette: ThemeColors) =>
     justifyContent: 'center',
     backgroundColor: Palette.inputBg,
   },
-  paymentDeleteBtnText: { fontSize: 12, color: Palette.muted, fontFamily: Font.sansSemibold },
   expenseEmoji: { fontSize: 19 },
   expenseDesc: { fontSize: 14.5, fontFamily: Font.sansSemibold, color: Palette.ink },
   expenseMeta: { marginTop: 3, fontSize: 12, color: Palette.muted },
