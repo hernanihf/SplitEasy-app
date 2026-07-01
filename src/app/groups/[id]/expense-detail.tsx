@@ -1,11 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Font, Radius, avatarColor, expenseEmoji, tileBg, type ThemeColors } from '@/constants/design';
+import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, i18n, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -20,7 +22,11 @@ function formatDate(iso: string): string {
 }
 
 export default function ExpenseDetailScreen() {
-  const { id, expense: expenseParam } = useLocalSearchParams<{ id: string; expense?: string }>();
+  const { id, expense: expenseParam, myId: myIdParam } = useLocalSearchParams<{
+    id: string;
+    expense?: string;
+    myId?: string;
+  }>();
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const { api } = useAuth();
@@ -33,7 +39,12 @@ export default function ExpenseDetailScreen() {
     }
   }, [expenseParam]);
 
+  const myId = myIdParam ? Number(myIdParam) : null;
+
   const [members, setMembers] = useState<Group['members']>([]);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -51,6 +62,32 @@ export default function ExpenseDetailScreen() {
     return <View style={styles.root} />;
   }
 
+  // Mirrors the backend's own rule: only the payer or a split participant
+  // may edit or delete. Hiding the buttons otherwise avoids a dead-end 403.
+  const canModify =
+    myId != null && (expense.paid_by.id === myId || (expense.splits ?? []).some((s) => s.user_id === myId));
+
+  const handleEdit = () => {
+    router.push({
+      pathname: '/groups/[id]/add-expense',
+      params: { id: id as string, expense: JSON.stringify(expense) },
+    });
+  };
+
+  const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await api.delete(`/api/v1/expenses/${expense.id}`);
+      router.back();
+    } catch (e) {
+      setConfirmingDelete(false);
+      setError(e instanceof ApiError && e.status === 403 ? t('expenseDetail.notAllowed') : t('expenseDetail.deleteError'));
+      setDeleting(false);
+    }
+  };
+
   const emoji = expenseEmoji(expense.description);
   const splits = (expense.splits ?? []).filter((s) => s.amount !== 0);
 
@@ -60,8 +97,21 @@ export default function ExpenseDetailScreen() {
         <View style={styles.topbar}>
           <BackButton onPress={() => router.back()} />
           <Text style={styles.topTitle}>{t('expenseDetail.title')}</Text>
-          <View style={{ width: 38 }} />
+          {canModify ? (
+            <View style={styles.topActions}>
+              <Pressable onPress={handleEdit} hitSlop={8} style={styles.topAction}>
+                <Text style={styles.topActionText}>{t('common.edit')}</Text>
+              </Pressable>
+              <Pressable onPress={() => setConfirmingDelete(true)} hitSlop={8} style={styles.topAction}>
+                <Text style={[styles.topActionText, styles.topActionDestructive]}>{t('common.delete')}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={{ width: 38 }} />
+          )}
         </View>
+
+        {error && <Text style={styles.error}>{error}</Text>}
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.hero}>
@@ -126,6 +176,14 @@ export default function ExpenseDetailScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
+
+      <ConfirmDialog
+        visible={confirmingDelete}
+        title={t('expenseDetail.deleteTitle')}
+        message={t('expenseDetail.deleteMessage')}
+        onCancel={() => setConfirmingDelete(false)}
+        onConfirm={handleDelete}
+      />
     </View>
   );
 }
@@ -143,6 +201,11 @@ const makeStyles = (Palette: ThemeColors) =>
       justifyContent: 'space-between',
     },
     topTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
+    topActions: { flexDirection: 'row', gap: 14 },
+    topAction: { paddingVertical: 4, paddingHorizontal: 2 },
+    topActionText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.green },
+    topActionDestructive: { color: Palette.red },
+    error: { color: Palette.red, fontSize: 13, marginTop: 4, marginBottom: 4, marginHorizontal: 20 },
     scroll: { paddingHorizontal: 20, paddingBottom: 28 },
     hero: { alignItems: 'center', paddingVertical: 18 },
     heroTile: {

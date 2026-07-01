@@ -8,9 +8,9 @@ import { BackButton } from '@/components/back-button';
 import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { useColors } from '@/lib/settings';
-import { formatAmount, t, toCents } from '@/lib/i18n';
+import { formatAmount, fromCents, t, toCents } from '@/lib/i18n';
 import { assetToFile, scanReceiptFile } from '@/lib/receipt-scan';
-import type { Group } from '@/app/groups/[id]/index';
+import type { Expense, Group } from '@/app/groups/[id]/index';
 
 type SplitMethod = 'equal' | 'fixed' | 'percentage';
 
@@ -21,21 +21,50 @@ const METHODS: { value: SplitMethod; key: string }[] = [
 ];
 
 export default function AddExpenseScreen() {
-  const { id, description: prefillDesc, amount: prefillAmount } = useLocalSearchParams<{
+  const {
+    id,
+    description: prefillDesc,
+    amount: prefillAmount,
+    expense: expenseParam,
+  } = useLocalSearchParams<{
     id: string;
     description?: string;
     amount?: string;
+    expense?: string;
   }>();
   const { api } = useAuth();
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
+  // Editing an existing expense: prefilled from the snapshot passed in by
+  // expense-detail, not re-fetched. There's no way to know which split
+  // method originally produced the current per-person amounts (only the
+  // resulting cents are stored), so editing always starts from "fixed"
+  // with those amounts pre-filled — faithful to the current state, and the
+  // user can still switch method from there.
+  const existing = useMemo<Expense | null>(() => {
+    if (!expenseParam) return null;
+    try {
+      return JSON.parse(expenseParam);
+    } catch {
+      return null;
+    }
+  }, [expenseParam]);
+  const isEditMode = existing != null;
+
   const [group, setGroup] = useState<Group | null>(null);
-  const [desc, setDesc] = useState(prefillDesc ?? '');
-  const [amount, setAmount] = useState(prefillAmount ?? '');
-  const [paidBy, setPaidBy] = useState<number | null>(null);
-  const [method, setMethod] = useState<SplitMethod>('equal');
-  const [values, setValues] = useState<Record<number, string>>({});
+  const [desc, setDesc] = useState(existing?.description ?? prefillDesc ?? '');
+  const [amount, setAmount] = useState(existing ? fromCents(existing.amount) : prefillAmount ?? '');
+  const [paidBy, setPaidBy] = useState<number | null>(existing?.paid_by.id ?? null);
+  const [method, setMethod] = useState<SplitMethod>(isEditMode ? 'fixed' : 'equal');
+  const [values, setValues] = useState<Record<number, string>>(() => {
+    if (!existing) return {};
+    const initialValues: Record<number, string> = {};
+    for (const s of existing.splits ?? []) {
+      initialValues[s.user_id] = fromCents(s.amount);
+    }
+    return initialValues;
+  });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -84,9 +113,12 @@ export default function AddExpenseScreen() {
       api.get<{ id: number }>('/api/v1/users/me'),
     ]).then(([g, me]) => {
       setGroup(g);
-      setPaidBy(g.members.some((m) => m.id === me.id) ? me.id : (g.members[0]?.id ?? null));
+      // Editing keeps the expense's actual payer; only default it for a new one.
+      if (!isEditMode) {
+        setPaidBy(g.members.some((m) => m.id === me.id) ? me.id : (g.members[0]?.id ?? null));
+      }
     });
-  }, [id, api]);
+  }, [id, api, isEditMode]);
 
   const amountNumber = useMemo(() => parseFloat(amount.replace(',', '.')) || 0, [amount]);
   const amountCents = useMemo(() => toCents(amount), [amount]);
@@ -124,17 +156,30 @@ export default function AddExpenseScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      await api.post('/api/v1/expenses', {
-        group_id: group.id,
-        paid_by_id: paidBy,
-        description: desc.trim(),
-        amount: amountCents,
-        split_method: method,
-        splits,
-      });
+      if (isEditMode && existing) {
+        await api.put(`/api/v1/expenses/${existing.id}`, {
+          paid_by_id: paidBy,
+          description: desc.trim(),
+          amount: amountCents,
+          split_method: method,
+          splits,
+        });
+      } else {
+        await api.post('/api/v1/expenses', {
+          group_id: group.id,
+          paid_by_id: paidBy,
+          description: desc.trim(),
+          amount: amountCents,
+          split_method: method,
+          splits,
+        });
+      }
+      // Go straight back to the group list rather than to expense-detail
+      // (which was pushed with a snapshot, not a live fetch, and would show
+      // stale data after an edit).
       router.replace(`/groups/${id}`);
     } catch {
-      setError(t('addExpense.addError'));
+      setError(t(isEditMode ? 'addExpense.updateError' : 'addExpense.addError'));
     } finally {
       setSubmitting(false);
     }
@@ -155,7 +200,7 @@ export default function AddExpenseScreen() {
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.topbar}>
           <BackButton onPress={() => router.back()} />
-          <Text style={styles.topTitle}>{t('addExpense.title')}</Text>
+          <Text style={styles.topTitle}>{t(isEditMode ? 'addExpense.editTitle' : 'addExpense.title')}</Text>
           <View style={{ width: 38 }} />
         </View>
 
@@ -178,7 +223,12 @@ export default function AddExpenseScreen() {
             </View>
           </View>
 
+          {isEditMode && existing?.items && existing.items.length > 0 && (
+            <Text style={styles.itemsNotice}>{t('addExpense.itemsWillBeRemoved')}</Text>
+          )}
+
           {/* receipt scan */}
+          {!isEditMode && (
           <View style={styles.card}>
             {scanning ? (
               <View style={styles.scannedRow}>
@@ -205,6 +255,7 @@ export default function AddExpenseScreen() {
               </View>
             )}
           </View>
+          )}
 
           {/* description */}
           <View style={styles.inputCard}>
@@ -310,7 +361,7 @@ export default function AddExpenseScreen() {
             disabled={submitting}
             style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}>
             <Text style={styles.saveText}>
-              {submitting ? t('addExpense.saving') : t('addExpense.add')}
+              {submitting ? t('addExpense.saving') : t(isEditMode ? 'addExpense.save' : 'addExpense.add')}
             </Text>
           </Pressable>
         </View>
@@ -469,6 +520,13 @@ const makeStyles = (Palette: ThemeColors) =>
   splitHintLabel: { fontSize: 12.5, fontFamily: Font.sansSemibold, color: Palette.muted3 },
   splitHintValue: { fontFamily: Font.monoSemibold, fontSize: 13, color: Palette.ink },
   error: { color: Palette.red, fontSize: 13, marginTop: 12, marginLeft: 4 },
+  itemsNotice: {
+    fontSize: 12.5,
+    color: Palette.muted,
+    marginBottom: 14,
+    marginTop: -2,
+    lineHeight: 17,
+  },
   footer: {
     paddingHorizontal: 20,
     paddingTop: 12,

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Font, Radius, avatarColor, expenseEmoji, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
@@ -66,6 +67,8 @@ export default function GroupDetailScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [deletingSettlementId, setDeletingSettlementId] = useState<number | null>(null);
+  const [deletingSettlement, setDeletingSettlement] = useState(false);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -160,6 +163,21 @@ export default function GroupDetailScreen() {
       Share.share({ message: url }).catch(() => {});
     }
   }, [api, id, inviteUrl]);
+
+  const confirmDeleteSettlement = useCallback(async () => {
+    if (deletingSettlementId == null || deletingSettlement) return;
+    setDeletingSettlement(true);
+    try {
+      await api.delete(`/api/v1/settlements/${deletingSettlementId}`);
+      setDeletingSettlementId(null);
+      load();
+    } catch {
+      setDeletingSettlementId(null);
+      setErrorMsg(t('groupDetail.deleteSettlementError'));
+    } finally {
+      setDeletingSettlement(false);
+    }
+  }, [api, deletingSettlementId, deletingSettlement, load]);
 
   if (loading && !group) {
     return (
@@ -272,6 +290,7 @@ export default function GroupDetailScreen() {
               {history.map((item) => {
                 if (item.kind === 'payment') {
                   const s = item.settlement;
+                  const canDelete = myId != null && (s.from_user_id === myId || s.to_user_id === myId);
                   return (
                     <View key={`s${s.id}`} style={styles.expenseCard}>
                       <View style={[styles.smallAvatar, { backgroundColor: tileBg('payment') }]}>
@@ -293,6 +312,14 @@ export default function GroupDetailScreen() {
                           {formatAmount(s.amount)}
                         </Text>
                       </View>
+                      {canDelete && (
+                        <Pressable
+                          onPress={() => setDeletingSettlementId(s.id)}
+                          hitSlop={8}
+                          style={styles.paymentDeleteBtn}>
+                          <Text style={styles.paymentDeleteBtnText}>✕</Text>
+                        </Pressable>
+                      )}
                     </View>
                   );
                 }
@@ -309,7 +336,7 @@ export default function GroupDetailScreen() {
                     onPress={() =>
                       router.push({
                         pathname: '/groups/[id]/expense-detail',
-                        params: { id: id as string, expense: JSON.stringify(ex) },
+                        params: { id: id as string, expense: JSON.stringify(ex), myId: String(myId ?? '') },
                       })
                     }
                     style={({ pressed }) => [styles.expenseCard, pressed && styles.pressed]}>
@@ -426,6 +453,13 @@ export default function GroupDetailScreen() {
         )}
       </SafeAreaView>
       <BottomNav active="index" />
+      <ConfirmDialog
+        visible={deletingSettlementId != null}
+        title={t('groupDetail.deleteSettlementTitle')}
+        message={t('groupDetail.deleteSettlementMessage')}
+        onCancel={() => setDeletingSettlementId(null)}
+        onConfirm={confirmDeleteSettlement}
+      />
     </View>
   );
 }
@@ -494,6 +528,15 @@ const makeStyles = (Palette: ThemeColors) =>
     gap: 13,
   },
   smallAvatar: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  paymentDeleteBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Palette.inputBg,
+  },
+  paymentDeleteBtnText: { fontSize: 12, color: Palette.muted, fontFamily: Font.sansSemibold },
   expenseEmoji: { fontSize: 19 },
   expenseDesc: { fontSize: 14.5, fontFamily: Font.sansSemibold, color: Palette.ink },
   expenseMeta: { marginTop: 3, fontSize: 12, color: Palette.muted },

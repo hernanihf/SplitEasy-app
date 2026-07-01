@@ -3,6 +3,7 @@ import { I18n } from 'i18n-js';
 
 const translations = {
   en: {
+    common: { cancel: 'Cancel', delete: 'Delete', edit: 'Edit' },
     nav: { groups: 'Groups', activity: 'Activity', profile: 'Profile' },
     install: {
       title: 'Install SplitEasy',
@@ -78,6 +79,9 @@ const translations = {
       paidBy: 'Paid by %{name}',
       youLent: 'You lent %{amount}',
       youOwe: 'You owe %{amount}',
+      deleteSettlementTitle: 'Delete this payment?',
+      deleteSettlementMessage: "This can't be undone from the app.",
+      deleteSettlementError: 'Could not delete the payment. Please try again.',
     },
     join: {
       joining: 'Joining the group…',
@@ -85,6 +89,7 @@ const translations = {
     },
     addExpense: {
       title: 'New expense',
+      editTitle: 'Edit expense',
       amountIn: 'Amount in %{group}',
       scan: '📷 Scan',
       upload: '📎 Upload file',
@@ -99,6 +104,7 @@ const translations = {
       methodPercentage: 'Percent',
       percentagesMustTotal: 'Percentages must add up to 100.',
       add: 'Add expense',
+      save: 'Save changes',
       saving: 'Saving…',
       splitTotal: 'Total split',
       remaining: 'Remaining',
@@ -107,6 +113,8 @@ const translations = {
       pickMember: 'Pick at least one member to split the expense.',
       amountsMustTotal: 'Amounts must add up to %{amount}.',
       addError: 'Could not add the expense. Check the details.',
+      updateError: 'Could not update the expense. Check the details.',
+      itemsWillBeRemoved: 'Editing here removes the itemized breakdown (the amount and split are kept).',
       loading: 'Loading…',
     },
     scanReceipt: {
@@ -135,6 +143,10 @@ const translations = {
       title: 'Expense detail',
       split: 'How it was split',
       items: 'Items',
+      deleteTitle: 'Delete this expense?',
+      deleteMessage: "This can't be undone from the app.",
+      deleteError: 'Could not delete the expense. Please try again.',
+      notAllowed: 'Only the payer or a split participant can edit or delete this expense.',
     },
     auth: { signingIn: 'Signing in…' },
     newGroup: {
@@ -162,6 +174,7 @@ const translations = {
     },
   },
   es: {
+    common: { cancel: 'Cancelar', delete: 'Borrar', edit: 'Editar' },
     nav: { groups: 'Grupos', activity: 'Actividad', profile: 'Perfil' },
     install: {
       title: 'Instalar SplitEasy',
@@ -237,6 +250,9 @@ const translations = {
       paidBy: 'Pagó %{name}',
       youLent: 'Prestaste %{amount}',
       youOwe: 'Debés %{amount}',
+      deleteSettlementTitle: '¿Borrar este pago?',
+      deleteSettlementMessage: 'Esto no se puede deshacer desde la app.',
+      deleteSettlementError: 'No se pudo borrar el pago. Intentá de nuevo.',
     },
     join: {
       joining: 'Uniéndote al grupo…',
@@ -244,6 +260,7 @@ const translations = {
     },
     addExpense: {
       title: 'Nuevo gasto',
+      editTitle: 'Editar gasto',
       amountIn: 'Monto en %{group}',
       scan: '📷 Escanear',
       upload: '📎 Subir archivo',
@@ -258,6 +275,7 @@ const translations = {
       methodPercentage: 'Porcentaje',
       percentagesMustTotal: 'Los porcentajes tienen que sumar 100.',
       add: 'Agregar gasto',
+      save: 'Guardar cambios',
       saving: 'Guardando…',
       splitTotal: 'Total dividido',
       remaining: 'Resta',
@@ -266,6 +284,8 @@ const translations = {
       pickMember: 'Elegí al menos un miembro para dividir el gasto.',
       amountsMustTotal: 'Los montos tienen que sumar %{amount}.',
       addError: 'No se pudo agregar el gasto. Revisá los datos.',
+      updateError: 'No se pudo actualizar el gasto. Revisá los datos.',
+      itemsWillBeRemoved: 'Editar acá borra el detalle de ítems (el monto y la división se mantienen).',
       loading: 'Cargando…',
     },
     scanReceipt: {
@@ -294,6 +314,10 @@ const translations = {
       title: 'Detalle del gasto',
       split: 'Cómo se dividió',
       items: 'Ítems',
+      deleteTitle: '¿Borrar este gasto?',
+      deleteMessage: 'Esto no se puede deshacer desde la app.',
+      deleteError: 'No se pudo borrar el gasto. Intentá de nuevo.',
+      notAllowed: 'Solo quien pagó o participa del split puede editar o borrar este gasto.',
     },
     auth: { signingIn: 'Iniciando sesión…' },
     newGroup: {
