@@ -12,9 +12,22 @@ export class ApiError extends Error {
 
 type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown };
 
-export function createApiClient(getToken: () => string | null, onUnauthorized?: () => void) {
-  async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    const token = getToken();
+// getToken/onUnauthorized deal with the access token (short-lived, sent as a
+// Bearer header). refreshAccessToken is called once on a 401 to try to get a
+// fresh access token silently — via the caller's stored refresh token —
+// before giving up and treating the session as expired. It should return the
+// new access token on success, or null if the session can't be recovered
+// (e.g. the refresh token is itself invalid/expired/absent).
+export function createApiClient(
+  getToken: () => string | null,
+  refreshAccessToken: () => Promise<string | null>,
+  onUnauthorized?: () => void,
+) {
+  // tokenOverride, when set, means this call is already a retry after a
+  // refresh — it carries the fresh token to use, and also prevents a second
+  // refresh attempt if the retried request is unauthorized again.
+  async function request<T>(path: string, options: RequestOptions = {}, tokenOverride?: string): Promise<T> {
+    const token = tokenOverride ?? getToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
@@ -30,7 +43,15 @@ export function createApiClient(getToken: () => string | null, onUnauthorized?: 
     });
 
     if (!response.ok) {
-      if (response.status === 401) onUnauthorized?.();
+      if (response.status === 401) {
+        if (tokenOverride === undefined) {
+          const newToken = await refreshAccessToken();
+          if (newToken) {
+            return request<T>(path, options, newToken);
+          }
+        }
+        onUnauthorized?.();
+      }
       const text = await response.text();
       throw new ApiError(response.status, text || response.statusText);
     }
@@ -41,8 +62,8 @@ export function createApiClient(getToken: () => string | null, onUnauthorized?: 
     return (await response.json()) as T;
   }
 
-  async function postFormData<T>(path: string, formData: FormData): Promise<T> {
-    const token = getToken();
+  async function postFormData<T>(path: string, formData: FormData, tokenOverride?: string): Promise<T> {
+    const token = tokenOverride ?? getToken();
     const headers: Record<string, string> = {};
     if (token) {
       headers.Authorization = `Bearer ${token}`;
@@ -56,7 +77,15 @@ export function createApiClient(getToken: () => string | null, onUnauthorized?: 
     });
 
     if (!response.ok) {
-      if (response.status === 401) onUnauthorized?.();
+      if (response.status === 401) {
+        if (tokenOverride === undefined) {
+          const newToken = await refreshAccessToken();
+          if (newToken) {
+            return postFormData<T>(path, formData, newToken);
+          }
+        }
+        onUnauthorized?.();
+      }
       const text = await response.text();
       throw new ApiError(response.status, text || response.statusText);
     }

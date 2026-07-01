@@ -25,17 +25,16 @@ export default function LoginScreen() {
       const redirectUri = Linking.createURL('auth/callback');
       const result = await WebBrowser.openAuthSessionAsync(googleLoginUrl, redirectUri);
       if (result.type === 'success' && result.url) {
-        // The backend sends the JWT in the URL fragment (#token=...) so it
-        // never reaches access logs; Linking.parse only reads the query
-        // string, so the fragment needs to be parsed out separately.
+        // The backend sends both tokens in the URL fragment
+        // (#access_token=...&refresh_token=...) so neither reaches access
+        // logs; Linking.parse only reads the query string, so the fragment
+        // needs to be parsed out separately.
         const hashIndex = result.url.indexOf('#');
-        const fragmentToken =
-          hashIndex >= 0
-            ? new URLSearchParams(result.url.slice(hashIndex + 1)).get('token')
-            : null;
-        const token = fragmentToken ?? Linking.parse(result.url).queryParams?.token;
-        if (typeof token === 'string') {
-          await signIn(token);
+        const fragmentParams = hashIndex >= 0 ? new URLSearchParams(result.url.slice(hashIndex + 1)) : null;
+        const accessToken = fragmentParams?.get('access_token');
+        const refreshToken = fragmentParams?.get('refresh_token');
+        if (accessToken && refreshToken) {
+          await signIn(accessToken, refreshToken);
           router.replace('/');
         }
       }
