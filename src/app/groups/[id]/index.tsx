@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
@@ -187,7 +187,7 @@ export default function GroupDetailScreen() {
     return (
       <View style={styles.root}>
         <SafeAreaView edges={['top']} style={styles.center}>
-          <Text style={styles.muted}>{t('groupDetail.loading')}</Text>
+          <ActivityIndicator color={Palette.green} />
         </SafeAreaView>
       </View>
     );

@@ -55,7 +55,6 @@ const translations = {
     groupDetail: {
       userN: 'User #%{id}',
       loadError: 'Could not load the group.',
-      loading: 'Loading…',
       notFound: 'Group not found.',
       settleUp: 'Settle up',
       yourBalance: 'Your balance in this group',
@@ -242,7 +241,6 @@ const translations = {
     groupDetail: {
       userN: 'Usuario #%{id}',
       loadError: 'No se pudo cargar el grupo.',
-      loading: 'Cargando…',
       notFound: 'Grupo no encontrado.',
       settleUp: 'Saldar',
       yourBalance: 'Tu balance en este grupo',
