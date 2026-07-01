@@ -223,10 +223,6 @@ export default function AddExpenseScreen() {
             </View>
           </View>
 
-          {isEditMode && existing?.items && existing.items.length > 0 && (
-            <Text style={styles.itemsNotice}>{t('addExpense.itemsWillBeRemoved')}</Text>
-          )}
-
           {/* receipt scan */}
           {!isEditMode && (
           <View style={styles.card}>
@@ -520,13 +516,6 @@ const makeStyles = (Palette: ThemeColors) =>
   splitHintLabel: { fontSize: 12.5, fontFamily: Font.sansSemibold, color: Palette.muted3 },
   splitHintValue: { fontFamily: Font.monoSemibold, fontSize: 13, color: Palette.ink },
   error: { color: Palette.red, fontSize: 13, marginTop: 12, marginLeft: 4 },
-  itemsNotice: {
-    fontSize: 12.5,
-    color: Palette.muted,
-    marginBottom: 14,
-    marginTop: -2,
-    lineHeight: 17,
-  },
   footer: {
     paddingHorizontal: 20,
     paddingTop: 12,

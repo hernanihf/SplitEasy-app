@@ -114,7 +114,6 @@ const translations = {
       amountsMustTotal: 'Amounts must add up to %{amount}.',
       addError: 'Could not add the expense. Check the details.',
       updateError: 'Could not update the expense. Check the details.',
-      itemsWillBeRemoved: 'Editing here removes the itemized breakdown (the amount and split are kept).',
       loading: 'Loading…',
     },
     scanReceipt: {
@@ -138,6 +137,7 @@ const translations = {
       perPerson: 'Per person',
       confirm: 'Add expense',
       assignAll: 'Every item needs at least one person.',
+      itemsInvalid: 'Every item needs a description and an amount greater than 0.',
     },
     expenseDetail: {
       title: 'Expense detail',
@@ -300,7 +300,6 @@ const translations = {
       amountsMustTotal: 'Los montos tienen que sumar %{amount}.',
       addError: 'No se pudo agregar el gasto. Revisá los datos.',
       updateError: 'No se pudo actualizar el gasto. Revisá los datos.',
-      itemsWillBeRemoved: 'Editar acá borra el detalle de ítems (el monto y la división se mantienen).',
       loading: 'Cargando…',
     },
     scanReceipt: {
@@ -324,6 +323,7 @@ const translations = {
       perPerson: 'Por persona',
       confirm: 'Agregar gasto',
       assignAll: 'Cada ítem necesita al menos una persona.',
+      itemsInvalid: 'Cada ítem necesita una descripción y un monto mayor a 0.',
     },
     expenseDetail: {
       title: 'Detalle del gasto',

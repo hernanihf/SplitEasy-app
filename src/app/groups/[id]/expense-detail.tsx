@@ -94,8 +94,9 @@ export default function ExpenseDetailScreen() {
     myId != null && (expense.paid_by.id === myId || (expense.splits ?? []).some((s) => s.user_id === myId));
 
   const handleEdit = () => {
+    const hasItems = (expense.items ?? []).length > 0;
     router.push({
-      pathname: '/groups/[id]/add-expense',
+      pathname: hasItems ? '/groups/[id]/itemize' : '/groups/[id]/add-expense',
       params: { id: id as string, expense: JSON.stringify(expense) },
     });
   };

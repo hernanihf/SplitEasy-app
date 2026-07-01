@@ -7,27 +7,50 @@ import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
-import { formatAmount, t } from '@/lib/i18n';
+import { formatAmount, fromCents, t, toCents } from '@/lib/i18n';
 import type { ScannedItem } from '@/lib/receipt-scan';
 import { useColors } from '@/lib/settings';
 import { distributeCents } from '@/lib/split-math';
-import type { Group } from '@/app/groups/[id]/index';
+import type { Expense, Group } from '@/app/groups/[id]/index';
 
 type TaxMode = 'proportional' | 'equal';
 
+// Item amounts are edited as raw text (like every other amount field in this
+// app) and only parsed to cents where needed, so the input never fights the
+// user mid-keystroke re-formatting what they just typed.
+type EditableItem = { description: string; amountText: string };
+
 export default function ItemizeScreen() {
-  const { id, description, total: totalParam, items: itemsParam } = useLocalSearchParams<{
+  const {
+    id,
+    description,
+    total: totalParam,
+    items: itemsParam,
+    expense: expenseParam,
+  } = useLocalSearchParams<{
     id: string;
     description?: string;
     total?: string;
     items?: string;
+    expense?: string;
   }>();
   const { api } = useAuth();
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
-  const total = useMemo(() => parseInt(totalParam ?? '0', 10) || 0, [totalParam]);
-  const items = useMemo<ScannedItem[]>(() => {
+  // Editing an existing itemized expense: prefilled from the snapshot passed
+  // in by expense-detail, not re-fetched.
+  const existing = useMemo<Expense | null>(() => {
+    if (!expenseParam) return null;
+    try {
+      return JSON.parse(expenseParam);
+    } catch {
+      return null;
+    }
+  }, [expenseParam]);
+  const isEditMode = existing != null;
+
+  const scannedItems = useMemo<ScannedItem[]>(() => {
     try {
       return JSON.parse(itemsParam ?? '[]');
     } catch {
@@ -35,11 +58,22 @@ export default function ItemizeScreen() {
     }
   }, [itemsParam]);
 
+  const total = useMemo(
+    () => (existing ? existing.amount : parseInt(totalParam ?? '0', 10) || 0),
+    [existing, totalParam],
+  );
+
   const [group, setGroup] = useState<Group | null>(null);
-  const [desc, setDesc] = useState(description ?? '');
-  const [paidBy, setPaidBy] = useState<number | null>(null);
+  const [desc, setDesc] = useState(existing?.description ?? description ?? '');
+  const [paidBy, setPaidBy] = useState<number | null>(existing?.paid_by.id ?? null);
+  const [items, setItems] = useState<EditableItem[]>(() => {
+    const source = existing?.items ?? scannedItems;
+    return source.map((it) => ({ description: it.description, amountText: fromCents(it.amount) }));
+  });
   // assignments[i] = user ids the item is shared among.
-  const [assignments, setAssignments] = useState<number[][]>([]);
+  const [assignments, setAssignments] = useState<number[][]>(() =>
+    existing?.items ? existing.items.map((it) => it.users.map((u) => u.id)) : [],
+  );
   const [taxMode, setTaxMode] = useState<TaxMode>('proportional');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -51,27 +85,34 @@ export default function ItemizeScreen() {
       api.get<{ id: number }>('/api/v1/users/me'),
     ]).then(([g, me]) => {
       setGroup(g);
-      setPaidBy(g.members.some((m) => m.id === me.id) ? me.id : (g.members[0]?.id ?? null));
-      // Default: every item shared by everyone, the user then narrows it down.
-      const everyone = g.members.map((m) => m.id);
-      setAssignments(items.map(() => [...everyone]));
+      // Editing already has a real payer and per-item assignments from the
+      // existing expense — only default them for a brand new one.
+      if (!isEditMode) {
+        setPaidBy(g.members.some((m) => m.id === me.id) ? me.id : (g.members[0]?.id ?? null));
+        const everyone = g.members.map((m) => m.id);
+        setAssignments(Array.from({ length: items.length }, () => [...everyone]));
+      }
     });
-  }, [id, api, items]);
+    // items.length only varies at mount (items are editable in place, not
+    // added/removed), so it's safe here without re-running on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, api, isEditMode, items.length]);
 
   const memberIds = group?.members.map((m) => m.id) ?? [];
+  const itemCents = useMemo(() => items.map((it) => toCents(it.amountText)), [items]);
 
   const { perPerson, extra } = useMemo(() => {
     const itemSub: Record<number, number> = {};
     memberIds.forEach((uid) => (itemSub[uid] = 0));
 
-    items.forEach((it, i) => {
+    itemCents.forEach((cents, i) => {
       const assigned = assignments[i] ?? [];
       if (assigned.length === 0) return;
-      const shares = distributeCents(it.amount, assigned.map(() => 1));
+      const shares = distributeCents(cents, assigned.map(() => 1));
       assigned.forEach((uid, k) => (itemSub[uid] = (itemSub[uid] ?? 0) + shares[k]));
     });
 
-    const sumItems = items.reduce((s, it) => s + it.amount, 0);
+    const sumItems = itemCents.reduce((s, c) => s + c, 0);
     const extra = total - sumItems;
 
     const useProportional = taxMode === 'proportional' && memberIds.some((uid) => itemSub[uid] > 0);
@@ -82,7 +123,7 @@ export default function ItemizeScreen() {
     memberIds.forEach((uid, i) => (perPerson[uid] = (itemSub[uid] ?? 0) + extraShares[i]));
     return { perPerson, extra };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, assignments, taxMode, group, total]);
+  }, [itemCents, assignments, taxMode, group, total]);
 
   const toggle = (itemIndex: number, userId: number) => {
     setAssignments((prev) =>
@@ -93,29 +134,45 @@ export default function ItemizeScreen() {
     );
   };
 
+  const updateItemDescription = (itemIndex: number, value: string) => {
+    setItems((prev) => prev.map((it, i) => (i === itemIndex ? { ...it, description: value } : it)));
+  };
+
+  const updateItemAmount = (itemIndex: number, value: string) => {
+    setItems((prev) => prev.map((it, i) => (i === itemIndex ? { ...it, amountText: value } : it)));
+  };
+
   const confirm = async () => {
     if (!group || !paidBy) return;
+    if (items.some((it) => !it.description.trim() || toCents(it.amountText) <= 0)) {
+      return setError(t('itemize.itemsInvalid'));
+    }
     if (assignments.some((a) => a.length === 0)) return setError(t('itemize.assignAll'));
 
     setSubmitting(true);
     setError(null);
+    const payload = {
+      group_id: group.id,
+      paid_by_id: paidBy,
+      description: desc.trim() || t('scanReceipt.defaultMerchant'),
+      amount: total,
+      split_method: 'fixed',
+      splits: group.members.map((m) => ({ user_id: m.id, value: perPerson[m.id] ?? 0 })),
+      items: items.map((it, i) => ({
+        description: it.description.trim(),
+        amount: itemCents[i],
+        user_ids: assignments[i] ?? [],
+      })),
+    };
     try {
-      await api.post('/api/v1/expenses', {
-        group_id: group.id,
-        paid_by_id: paidBy,
-        description: desc.trim() || t('scanReceipt.defaultMerchant'),
-        amount: total,
-        split_method: 'fixed',
-        splits: group.members.map((m) => ({ user_id: m.id, value: perPerson[m.id] ?? 0 })),
-        items: items.map((it, i) => ({
-          description: it.description,
-          amount: it.amount,
-          user_ids: assignments[i] ?? [],
-        })),
-      });
+      if (isEditMode && existing) {
+        await api.put(`/api/v1/expenses/${existing.id}`, payload);
+      } else {
+        await api.post('/api/v1/expenses', payload);
+      }
       router.replace(`/groups/${id}`);
     } catch {
-      setError(t('addExpense.addError'));
+      setError(t(isEditMode ? 'addExpense.updateError' : 'addExpense.addError'));
     } finally {
       setSubmitting(false);
     }
@@ -130,7 +187,7 @@ export default function ItemizeScreen() {
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.topbar}>
           <BackButton onPress={() => router.back()} />
-          <Text style={styles.topTitle}>{t('itemize.title')}</Text>
+          <Text style={styles.topTitle}>{t(isEditMode ? 'addExpense.editTitle' : 'itemize.title')}</Text>
           <View style={{ width: 38 }} />
         </View>
 
@@ -171,10 +228,24 @@ export default function ItemizeScreen() {
             {items.map((it, i) => (
               <View key={i} style={styles.itemRow}>
                 <View style={styles.itemHeader}>
-                  <Text style={styles.itemDesc} numberOfLines={1}>
-                    {it.description}
-                  </Text>
-                  <Text style={styles.itemAmount}>{formatAmount(it.amount)}</Text>
+                  <TextInput
+                    value={it.description}
+                    onChangeText={(v) => updateItemDescription(i, v)}
+                    placeholder={t('addExpense.descriptionPlaceholder')}
+                    placeholderTextColor={Palette.muted}
+                    style={styles.itemDescInput}
+                  />
+                  <View style={styles.itemAmountRow}>
+                    <Text style={styles.itemAmountDollar}>$</Text>
+                    <TextInput
+                      value={it.amountText}
+                      onChangeText={(v) => updateItemAmount(i, v)}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      placeholderTextColor={Palette.muted}
+                      style={styles.itemAmountInput}
+                    />
+                  </View>
                 </View>
                 <View style={styles.assignRow}>
                   {group.members.map((m) => {
@@ -239,7 +310,7 @@ export default function ItemizeScreen() {
             onPress={confirm}
             disabled={submitting}
             style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
-            <Text style={styles.ctaText}>{t('itemize.confirm')}</Text>
+            <Text style={styles.ctaText}>{t(isEditMode ? 'addExpense.save' : 'itemize.confirm')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -306,9 +377,18 @@ const makeStyles = (Palette: ThemeColors) =>
       paddingVertical: 4,
     },
     itemRow: { paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: Palette.divider },
-    itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    itemDesc: { flex: 1, fontSize: 14.5, fontFamily: Font.sansMedium, color: Palette.ink },
-    itemAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink, marginLeft: 8 },
+    itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+    itemDescInput: { flex: 1, fontSize: 14.5, fontFamily: Font.sansMedium, color: Palette.ink, paddingVertical: 4 },
+    itemAmountRow: { flexDirection: 'row', alignItems: 'center' },
+    itemAmountDollar: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.muted, marginRight: 1 },
+    itemAmountInput: {
+      fontSize: 14,
+      fontFamily: Font.monoSemibold,
+      color: Palette.ink,
+      minWidth: 46,
+      textAlign: 'right',
+      paddingVertical: 4,
+    },
     assignRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 9 },
     assignChip: {
       flexDirection: 'row',
