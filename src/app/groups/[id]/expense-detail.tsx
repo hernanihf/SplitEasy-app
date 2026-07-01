@@ -1,4 +1,3 @@
-import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -105,14 +104,14 @@ export default function ExpenseDetailScreen() {
                 hitSlop={8}
                 accessibilityLabel={t('common.edit')}
                 style={styles.topAction}>
-                <Feather name="edit-2" size={17} color={Palette.green} />
+                <Text style={styles.topActionIcon}>✏️</Text>
               </Pressable>
               <Pressable
                 onPress={() => setConfirmingDelete(true)}
                 hitSlop={8}
                 accessibilityLabel={t('common.delete')}
                 style={styles.topAction}>
-                <Feather name="trash-2" size={17} color={Palette.red} />
+                <Text style={styles.topActionIcon}>🗑️</Text>
               </Pressable>
             </View>
           ) : (
@@ -212,6 +211,7 @@ const makeStyles = (Palette: ThemeColors) =>
     topTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
     topActions: { flexDirection: 'row', gap: 6 },
     topAction: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+    topActionIcon: { fontSize: 16 },
     error: { color: Palette.red, fontSize: 13, marginTop: 4, marginBottom: 4, marginHorizontal: 20 },
     scroll: { paddingHorizontal: 20, paddingBottom: 28 },
     hero: { alignItems: 'center', paddingVertical: 18 },
