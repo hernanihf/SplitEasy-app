@@ -42,7 +42,7 @@ const translations = {
       empty: 'No activity yet.',
       paidBy: 'Paid by %{name} · %{group}',
       settledIn: 'in %{group}',
-      openError: 'Could not open that expense.',
+      openError: 'Could not open that.',
     },
     profile: {
       title: 'Profile',
@@ -149,6 +149,21 @@ const translations = {
       deleteError: 'Could not delete the expense. Please try again.',
       notAllowed: 'Only the payer or a split participant can edit or delete this expense.',
     },
+    settlementDetail: {
+      title: 'Payment detail',
+      notAllowed: 'Only a party to this payment can delete it.',
+    },
+    comments: {
+      title: 'Comments',
+      placeholder: 'Add a comment…',
+      send: 'Send',
+      empty: 'No comments yet.',
+      loadError: 'Could not load comments.',
+      postError: 'Could not post your comment. Please try again.',
+      deleteTitle: 'Delete this comment?',
+      deleteMessage: "This can't be undone.",
+      deleteError: 'Could not delete the comment. Please try again.',
+    },
     auth: { signingIn: 'Signing in…' },
     newGroup: {
       title: 'New group',
@@ -214,7 +229,7 @@ const translations = {
       empty: 'Todavía no hay actividad.',
       paidBy: 'Pagó %{name} · %{group}',
       settledIn: 'en %{group}',
-      openError: 'No se pudo abrir ese gasto.',
+      openError: 'No se pudo abrir eso.',
     },
     profile: {
       title: 'Perfil',
@@ -320,6 +335,21 @@ const translations = {
       deleteMessage: 'Esto no se puede deshacer desde la app.',
       deleteError: 'No se pudo borrar el gasto. Intentá de nuevo.',
       notAllowed: 'Solo quien pagó o participa del split puede editar o borrar este gasto.',
+    },
+    settlementDetail: {
+      title: 'Detalle del pago',
+      notAllowed: 'Solo alguien de las partes del pago puede borrarlo.',
+    },
+    comments: {
+      title: 'Comentarios',
+      placeholder: 'Agregá un comentario…',
+      send: 'Enviar',
+      empty: 'Todavía no hay comentarios.',
+      loadError: 'No se pudieron cargar los comentarios.',
+      postError: 'No se pudo publicar tu comentario. Intentá de nuevo.',
+      deleteTitle: '¿Borrar este comentario?',
+      deleteMessage: 'Esto no se puede deshacer.',
+      deleteError: 'No se pudo borrar el comentario. Intentá de nuevo.',
     },
     auth: { signingIn: 'Iniciando sesión…' },
     newGroup: {

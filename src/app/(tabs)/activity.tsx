@@ -7,7 +7,7 @@ import { Font, expenseEmoji, tileBg, type ThemeColors } from '@/constants/design
 import { useAuth } from '@/lib/auth';
 import { formatAmount, i18n, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
-import type { Expense } from '@/app/groups/[id]/index';
+import type { Expense, Settlement } from '@/app/groups/[id]/index';
 
 type ActivityEvent = {
   id: number;
@@ -67,21 +67,29 @@ export default function ActivityScreen() {
   const openEvent = useCallback(
     async (ev: ActivityEvent, key: string) => {
       if (openingKey) return;
-      if (ev.type === 'settlement') {
-        router.push(`/groups/${ev.group_id}`);
-        return;
-      }
       setOpeningKey(key);
       try {
-        const expense = await api.get<Expense>(`/api/v1/expenses/${ev.id}`);
-        router.push({
-          pathname: '/groups/[id]/expense-detail',
-          params: {
-            id: String(ev.group_id),
-            expense: JSON.stringify(expense),
-            myId: String(myId ?? ''),
-          },
-        });
+        if (ev.type === 'settlement') {
+          const settlement = await api.get<Settlement>(`/api/v1/settlements/${ev.id}`);
+          router.push({
+            pathname: '/groups/[id]/settlement-detail',
+            params: {
+              id: String(ev.group_id),
+              settlement: JSON.stringify(settlement),
+              myId: String(myId ?? ''),
+            },
+          });
+        } else {
+          const expense = await api.get<Expense>(`/api/v1/expenses/${ev.id}`);
+          router.push({
+            pathname: '/groups/[id]/expense-detail',
+            params: {
+              id: String(ev.group_id),
+              expense: JSON.stringify(expense),
+              myId: String(myId ?? ''),
+            },
+          });
+        }
       } catch {
         setErrorMsg(t('activity.openError'));
       } finally {

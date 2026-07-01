@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
+import { CommentsSection, type Comment } from '@/components/comments-section';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Font, Radius, avatarColor, expenseEmoji, tileBg, type ThemeColors } from '@/constants/design';
 import { ApiError } from '@/lib/api';
@@ -45,6 +46,9 @@ export default function ExpenseDetailScreen() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(true);
+  const [commentsError, setCommentsError] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -53,6 +57,28 @@ export default function ExpenseDetailScreen() {
       .then((g) => setMembers(g.members))
       .catch(() => {});
   }, [id, api]);
+
+  useEffect(() => {
+    if (!expense) return;
+    setCommentsLoading(true);
+    setCommentsError(false);
+    api
+      .get<Comment[]>(`/api/v1/expenses/${expense.id}/comments`)
+      .then((data) => setComments(data ?? []))
+      .catch(() => setCommentsError(true))
+      .finally(() => setCommentsLoading(false));
+  }, [expense, api]);
+
+  const handleAddComment = async (body: string) => {
+    if (!expense) return;
+    const comment = await api.post<Comment>(`/api/v1/expenses/${expense.id}/comments`, { body });
+    setComments((prev) => [...prev, comment]);
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    await api.delete(`/api/v1/comments/${commentId}`);
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
+  };
 
   const memberName = (uid: number) =>
     members.find((m) => m.id === uid)?.name ?? t('groupDetail.userN', { id: uid });
@@ -182,6 +208,15 @@ export default function ExpenseDetailScreen() {
               </View>
             </>
           )}
+
+          <CommentsSection
+            comments={comments}
+            loading={commentsLoading}
+            loadError={commentsError}
+            myId={myId}
+            onAdd={handleAddComment}
+            onDelete={handleDeleteComment}
+          />
         </ScrollView>
       </SafeAreaView>
 

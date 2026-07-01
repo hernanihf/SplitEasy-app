@@ -36,12 +36,16 @@ export type Expense = {
   created_at: string;
 };
 
-type Settlement = {
+export type Settlement = {
   id: number;
   from_user_id: number;
   to_user_id: number;
   amount: number;
   created_at: string;
+  // Embedded by the backend on the single-settlement and group-list
+  // endpoints (not on the activity feed, which only has ids/amounts).
+  from_user?: { id: number; name: string; avatar_url?: string | null };
+  to_user?: { id: number; name: string; avatar_url?: string | null };
 };
 
 type Debt = { from_user_id: number; to_user_id: number; amount: number };
@@ -292,7 +296,15 @@ export default function GroupDetailScreen() {
                   const s = item.settlement;
                   const canDelete = myId != null && (s.from_user_id === myId || s.to_user_id === myId);
                   return (
-                    <View key={`s${s.id}`} style={styles.expenseCard}>
+                    <Pressable
+                      key={`s${s.id}`}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/groups/[id]/settlement-detail',
+                          params: { id: id as string, settlement: JSON.stringify(s), myId: String(myId ?? '') },
+                        })
+                      }
+                      style={({ pressed }) => [styles.expenseCard, pressed && styles.pressed]}>
                       <View style={[styles.smallAvatar, { backgroundColor: tileBg('payment') }]}>
                         <Text style={styles.expenseEmoji}>💸</Text>
                       </View>
@@ -314,13 +326,16 @@ export default function GroupDetailScreen() {
                       </View>
                       {canDelete && (
                         <Pressable
-                          onPress={() => setDeletingSettlementId(s.id)}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setDeletingSettlementId(s.id);
+                          }}
                           hitSlop={8}
                           style={styles.paymentDeleteBtn}>
                           <Text style={styles.paymentDeleteBtnText}>✕</Text>
                         </Pressable>
                       )}
-                    </View>
+                    </Pressable>
                   );
                 }
                 const ex = item.expense;
