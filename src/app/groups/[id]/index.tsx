@@ -357,6 +357,10 @@ export default function GroupDetailScreen() {
                   // Show the other person's photo — the counterparty relative to me.
                   const otherId =
                     myId != null && d.from_user_id === myId ? d.to_user_id : d.from_user_id;
+                  // Only a party to the debt can record it as settled (the backend
+                  // enforces this too) — showing the button to bystanders would
+                  // just dead-end into a 403.
+                  const canSettle = myId != null && (d.from_user_id === myId || d.to_user_id === myId);
                   return (
                   <View key={i} style={styles.balanceCard}>
                     <Avatar
@@ -375,25 +379,27 @@ export default function GroupDetailScreen() {
                       </Text>
                       <Text style={styles.balanceAmount}>{formatAmount(d.amount)}</Text>
                     </View>
-                    <Pressable
-                      onPress={() =>
-                        router.push({
-                          pathname: '/groups/[id]/settle',
-                          params: {
-                            id: id as string,
-                            from: String(d.from_user_id),
-                            to: String(d.to_user_id),
-                            amount: String(d.amount),
-                            fromName: memberName(d.from_user_id),
-                            toName: memberName(d.to_user_id),
-                            fromAvatar: memberAvatar(d.from_user_id),
-                            toAvatar: memberAvatar(d.to_user_id),
-                          },
-                        })
-                      }
-                      style={styles.settleBtn}>
-                      <Text style={styles.settleBtnText}>{t('groupDetail.settle')}</Text>
-                    </Pressable>
+                    {canSettle && (
+                      <Pressable
+                        onPress={() =>
+                          router.push({
+                            pathname: '/groups/[id]/settle',
+                            params: {
+                              id: id as string,
+                              from: String(d.from_user_id),
+                              to: String(d.to_user_id),
+                              amount: String(d.amount),
+                              fromName: memberName(d.from_user_id),
+                              toName: memberName(d.to_user_id),
+                              fromAvatar: memberAvatar(d.from_user_id),
+                              toAvatar: memberAvatar(d.to_user_id),
+                            },
+                          })
+                        }
+                        style={styles.settleBtn}>
+                        <Text style={styles.settleBtnText}>{t('groupDetail.settle')}</Text>
+                      </Pressable>
+                    )}
                   </View>
                   );
                 })
