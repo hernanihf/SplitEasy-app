@@ -99,11 +99,19 @@ export default function ExpenseDetailScreen() {
           <Text style={styles.topTitle}>{t('expenseDetail.title')}</Text>
           {canModify ? (
             <View style={styles.topActions}>
-              <Pressable onPress={handleEdit} hitSlop={8} style={styles.topAction}>
-                <Text style={styles.topActionText}>{t('common.edit')}</Text>
+              <Pressable
+                onPress={handleEdit}
+                hitSlop={8}
+                accessibilityLabel={t('common.edit')}
+                style={styles.topAction}>
+                <Text style={styles.topActionIcon}>✏️</Text>
               </Pressable>
-              <Pressable onPress={() => setConfirmingDelete(true)} hitSlop={8} style={styles.topAction}>
-                <Text style={[styles.topActionText, styles.topActionDestructive]}>{t('common.delete')}</Text>
+              <Pressable
+                onPress={() => setConfirmingDelete(true)}
+                hitSlop={8}
+                accessibilityLabel={t('common.delete')}
+                style={styles.topAction}>
+                <Text style={styles.topActionIcon}>🗑️</Text>
               </Pressable>
             </View>
           ) : (
@@ -201,10 +209,9 @@ const makeStyles = (Palette: ThemeColors) =>
       justifyContent: 'space-between',
     },
     topTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
-    topActions: { flexDirection: 'row', gap: 14 },
-    topAction: { paddingVertical: 4, paddingHorizontal: 2 },
-    topActionText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.green },
-    topActionDestructive: { color: Palette.red },
+    topActions: { flexDirection: 'row', gap: 6 },
+    topAction: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+    topActionIcon: { fontSize: 16 },
     error: { color: Palette.red, fontSize: 13, marginTop: 4, marginBottom: 4, marginHorizontal: 20 },
     scroll: { paddingHorizontal: 20, paddingBottom: 28 },
     hero: { alignItems: 'center', paddingVertical: 18 },
