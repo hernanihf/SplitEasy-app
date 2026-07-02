@@ -4,22 +4,26 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { DEFAULT_CURRENCY } from '@/constants/currencies';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
-import { formatAmount, fromCents, t, toCents } from '@/lib/i18n';
+import { currencySymbol, formatAmount, fromCents, t, toCents } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
 
 export default function SettleScreen() {
-  const { id, from, to, amount, fromName, toName, fromAvatar, toAvatar } = useLocalSearchParams<{
-    id: string;
-    from: string;
-    to: string;
-    amount: string;
-    fromName?: string;
-    toName?: string;
-    fromAvatar?: string;
-    toAvatar?: string;
-  }>();
+  const { id, from, to, amount, currency, fromName, toName, fromAvatar, toAvatar } =
+    useLocalSearchParams<{
+      id: string;
+      from: string;
+      to: string;
+      amount: string;
+      currency?: string;
+      fromName?: string;
+      toName?: string;
+      fromAvatar?: string;
+      toAvatar?: string;
+    }>();
+  const groupCurrency = currency ?? DEFAULT_CURRENCY;
   const { api } = useAuth();
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
@@ -37,7 +41,7 @@ export default function SettleScreen() {
     const paid = toCents(value);
     if (paid <= 0) return setError(t('settle.amountPositive'));
     if (paid > maxAmount)
-      return setError(t('settle.amountTooHigh', { max: formatAmount(maxAmount) }));
+      return setError(t('settle.amountTooHigh', { max: formatAmount(maxAmount, groupCurrency) }));
 
     setSubmitting(true);
     setError(null);
@@ -71,7 +75,7 @@ export default function SettleScreen() {
             </View>
             <View style={styles.person}>
               <Text style={styles.arrow}>→</Text>
-              <Text style={styles.flowAmount}>{formatAmount(maxAmount)}</Text>
+              <Text style={styles.flowAmount}>{formatAmount(maxAmount, groupCurrency)}</Text>
             </View>
             <View style={styles.person}>
               <Avatar uri={toAvatar} name={tName} size={48} color={avatarColor(Number(to))} fontSize={18} />
@@ -81,7 +85,7 @@ export default function SettleScreen() {
 
           <Text style={styles.howMuch}>{t('settle.howMuch')}</Text>
           <View style={styles.amountBox}>
-            <Text style={styles.dollar}>$</Text>
+            <Text style={styles.dollar}>{currencySymbol(groupCurrency)}</Text>
             <TextInput
               value={value}
               onChangeText={setValue}

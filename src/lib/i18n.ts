@@ -1,6 +1,8 @@
 import { getLocales } from 'expo-localization';
 import { I18n } from 'i18n-js';
 
+import { DEFAULT_CURRENCY } from '@/constants/currencies';
+
 const translations = {
   en: {
     common: { cancel: 'Cancel', delete: 'Delete', edit: 'Edit' },
@@ -188,6 +190,17 @@ const translations = {
       pets: 'Pets',
       household: 'Household',
       other: 'Other',
+    },
+    currencies: {
+      label: 'Currency',
+      USD: 'US Dollar',
+      ARS: 'Argentine Peso',
+      EUR: 'Euro',
+      BRL: 'Brazilian Real',
+      CLP: 'Chilean Peso',
+      UYU: 'Uruguayan Peso',
+      MXN: 'Mexican Peso',
+      COP: 'Colombian Peso',
     },
     auth: { signingIn: 'Signing in…' },
     newGroup: {
@@ -401,6 +414,17 @@ const translations = {
       household: 'Hogar',
       other: 'Otros',
     },
+    currencies: {
+      label: 'Moneda',
+      USD: 'Dólar estadounidense',
+      ARS: 'Peso argentino',
+      EUR: 'Euro',
+      BRL: 'Real brasileño',
+      CLP: 'Peso chileno',
+      UYU: 'Peso uruguayo',
+      MXN: 'Peso mexicano',
+      COP: 'Peso colombiano',
+    },
     auth: { signingIn: 'Iniciando sesión…' },
     newGroup: {
       title: 'Nuevo grupo',
@@ -448,19 +472,38 @@ export function t(key: string, options?: Record<string, unknown>): string {
   return i18n.t(key, options);
 }
 
-/** Formats a monetary amount (in integer cents) with locale-aware grouping, prefixed with "$". */
-export function formatAmount(cents: number): string {
+/**
+ * Formats a monetary amount (in integer cents) with locale-aware grouping
+ * and the given currency's symbol/placement, via Intl — e.g. 123450 cents
+ * in ARS renders as "$ 1.234,50" (es) while the same cents in EUR render as
+ * "1.234,50 €", with no per-currency table to maintain here. Currency
+ * defaults to USD for the handful of call sites without a group in scope.
+ */
+export function formatAmount(cents: number, currency: string = DEFAULT_CURRENCY): string {
   const numberLocale = i18n.locale === 'es' ? 'es-AR' : 'en-US';
-  return `$${new Intl.NumberFormat(numberLocale, {
+  return new Intl.NumberFormat(numberLocale, {
+    style: 'currency',
+    currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(cents / 100)}`;
+  }).format(cents / 100);
+}
+
+/**
+ * Just the symbol Intl would render for this currency (e.g. "$", "€",
+ * "ARS") — for decorating an amount TextInput while the user types, where a
+ * fully formatted number doesn't make sense.
+ */
+export function currencySymbol(currency: string = DEFAULT_CURRENCY): string {
+  const numberLocale = i18n.locale === 'es' ? 'es-AR' : 'en-US';
+  const parts = new Intl.NumberFormat(numberLocale, { style: 'currency', currency }).formatToParts(0);
+  return parts.find((p) => p.type === 'currency')?.value ?? '$';
 }
 
 /** Formats a cents amount with an explicit sign (used for balances). */
-export function formatSigned(cents: number): string {
+export function formatSigned(cents: number, currency: string = DEFAULT_CURRENCY): string {
   const sign = cents > 0 ? '+' : cents < 0 ? '−' : '';
-  return `${sign}${formatAmount(Math.abs(cents))}`;
+  return `${sign}${formatAmount(Math.abs(cents), currency)}`;
 }
 
 /** Parses a user-typed dollar string (e.g. "10.50") into integer cents. */

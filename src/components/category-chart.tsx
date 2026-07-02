@@ -13,6 +13,7 @@ type Props = {
   // Already aggregated and sorted (largest first) by the caller.
   slices: CategorySlice[];
   total: number;
+  currency: string;
 };
 
 const SIZE = 180;
@@ -22,7 +23,7 @@ const CX = SIZE / 2;
 const CY = SIZE / 2;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
-export function CategoryChart({ slices, total }: Props) {
+export function CategoryChart({ slices, total, currency }: Props) {
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
 
@@ -66,7 +67,7 @@ export function CategoryChart({ slices, total }: Props) {
         </Svg>
         <View style={styles.center} pointerEvents="none">
           <Text style={styles.centerLabel}>{t('groupDetail.totalSpent')}</Text>
-          <Text style={styles.centerValue}>{formatAmount(total)}</Text>
+          <Text style={styles.centerValue}>{formatAmount(total, currency)}</Text>
         </View>
       </View>
 
@@ -80,7 +81,7 @@ export function CategoryChart({ slices, total }: Props) {
                 {t(`categories.${a.slug}`)}
               </Text>
               <Text style={styles.legendPct}>{pct}%</Text>
-              <Text style={styles.legendAmount}>{formatAmount(a.amount)}</Text>
+              <Text style={styles.legendAmount}>{formatAmount(a.amount, currency)}</Text>
             </View>
           );
         })}

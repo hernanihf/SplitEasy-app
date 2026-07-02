@@ -16,6 +16,7 @@ type ActivityEvent = {
   group_id: number;
   group_name: string;
   group_emoji: string;
+  currency: string;
   title: string;
   category?: string;
   actor_id: number;
@@ -155,7 +156,7 @@ export default function ActivityScreen() {
                             styles.amount,
                             { color: settlement ? Palette.green : Palette.ink },
                           ]}>
-                          {formatAmount(ev.amount)}
+                          {formatAmount(ev.amount, ev.currency)}
                         </Text>
                         <Text style={styles.date}>{shortDate(ev.date)}</Text>
                       </>

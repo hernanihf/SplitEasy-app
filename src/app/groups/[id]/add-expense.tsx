@@ -10,7 +10,7 @@ import { DEFAULT_CATEGORY } from '@/constants/categories';
 import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { useColors } from '@/lib/settings';
-import { formatAmount, fromCents, t, toCents } from '@/lib/i18n';
+import { currencySymbol, formatAmount, fromCents, t, toCents } from '@/lib/i18n';
 import { assetToFile, scanReceiptFile } from '@/lib/receipt-scan';
 import type { Expense, Group } from '@/app/groups/[id]/index';
 
@@ -152,7 +152,7 @@ export default function AddExpenseScreen() {
     } else if (method === 'fixed') {
       splits = group.members.map((m) => ({ user_id: m.id, value: toCents(values[m.id] ?? '') }));
       if (Math.abs(splitTotal - amountNumber) > 0.01)
-        return setError(t('addExpense.amountsMustTotal', { amount: formatAmount(amountCents) }));
+        return setError(t('addExpense.amountsMustTotal', { amount: formatAmount(amountCents, group.currency) }));
     } else {
       splits = group.members.map((m) => ({
         user_id: m.id,
@@ -220,7 +220,7 @@ export default function AddExpenseScreen() {
           <View style={styles.amountCard}>
             <Text style={styles.amountLabel}>{t('addExpense.amountIn', { group: group.name })}</Text>
             <View style={styles.amountRow}>
-              <Text style={styles.dollar}>$</Text>
+              <Text style={styles.dollar}>{currencySymbol(group.currency)}</Text>
               <TextInput
                 value={amount}
                 onChangeText={setAmount}
@@ -335,10 +335,10 @@ export default function AddExpenseScreen() {
                     {m.name}
                   </Text>
                   {method === 'equal' ? (
-                    <Text style={styles.rowDisplay}>{formatAmount(equalShare)}</Text>
+                    <Text style={styles.rowDisplay}>{formatAmount(equalShare, group.currency)}</Text>
                   ) : (
                     <View style={styles.rowInputBox}>
-                      {method === 'fixed' && <Text style={styles.rowPrefix}>$</Text>}
+                      {method === 'fixed' && <Text style={styles.rowPrefix}>{currencySymbol(group.currency)}</Text>}
                       <TextInput
                         value={values[m.id] ?? ''}
                         onChangeText={(txt) => setValues((p) => ({ ...p, [m.id]: txt }))}
@@ -359,7 +359,7 @@ export default function AddExpenseScreen() {
                 <Text style={styles.splitHintValue}>
                   {method === 'percentage'
                     ? `${splitTotal}%`
-                    : formatAmount(Math.round(splitTotal * 100))}
+                    : formatAmount(Math.round(splitTotal * 100), group.currency)}
                 </Text>
               </View>
             )}

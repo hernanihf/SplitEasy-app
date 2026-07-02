@@ -18,6 +18,7 @@ export type Group = {
   id: number;
   name: string;
   emoji: string;
+  currency: string;
   members: { id: number; name: string; avatar_url?: string | null }[];
 };
 
@@ -283,7 +284,7 @@ export default function GroupDetailScreen() {
             ]}>
             <Text style={styles.summaryLabel}>{t('groupDetail.yourBalance')}</Text>
             <Text style={[styles.summaryAmount, { color: summaryColor }]}>
-              {formatAmount(Math.abs(myNet))}
+              {formatAmount(Math.abs(myNet), group.currency)}
             </Text>
             <Text style={[styles.summaryWord, { color: summaryColor }]}>{summaryWord}</Text>
           </View>
@@ -346,7 +347,7 @@ export default function GroupDetailScreen() {
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
                         <Text style={[styles.expenseAmount, { color: Palette.green }]}>
-                          {formatAmount(s.amount)}
+                          {formatAmount(s.amount, group.currency)}
                         </Text>
                       </View>
                       {canDelete && (
@@ -392,14 +393,14 @@ export default function GroupDetailScreen() {
                       </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.expenseAmount}>{formatAmount(ex.amount)}</Text>
+                      <Text style={styles.expenseAmount}>{formatAmount(ex.amount, group.currency)}</Text>
                       {paidByMe && lent > 0 ? (
                         <Text style={[styles.expenseShare, { color: Palette.green }]}>
-                          {t('groupDetail.youLent', { amount: formatAmount(lent) })}
+                          {t('groupDetail.youLent', { amount: formatAmount(lent, group.currency) })}
                         </Text>
                       ) : !paidByMe && myShare > 0 ? (
                         <Text style={[styles.expenseShare, { color: Palette.red }]}>
-                          {t('groupDetail.youOwe', { amount: formatAmount(myShare) })}
+                          {t('groupDetail.youOwe', { amount: formatAmount(myShare, group.currency) })}
                         </Text>
                       ) : null}
                     </View>
@@ -444,7 +445,7 @@ export default function GroupDetailScreen() {
                           to: memberName(d.to_user_id),
                         })}
                       </Text>
-                      <Text style={styles.balanceAmount}>{formatAmount(d.amount)}</Text>
+                      <Text style={styles.balanceAmount}>{formatAmount(d.amount, group.currency)}</Text>
                     </View>
                     {canSettle && (
                       <Pressable
@@ -456,6 +457,7 @@ export default function GroupDetailScreen() {
                               from: String(d.from_user_id),
                               to: String(d.to_user_id),
                               amount: String(d.amount),
+                              currency: group.currency,
                               fromName: memberName(d.from_user_id),
                               toName: memberName(d.to_user_id),
                               fromAvatar: memberAvatar(d.from_user_id),
@@ -476,7 +478,11 @@ export default function GroupDetailScreen() {
 
           {tab === 'stats' && (
             <View style={styles.statsPanel}>
-              <CategoryChart slices={categoryBreakdown.slices} total={categoryBreakdown.total} />
+              <CategoryChart
+                slices={categoryBreakdown.slices}
+                total={categoryBreakdown.total}
+                currency={group.currency}
+              />
             </View>
           )}
         </ScrollView>

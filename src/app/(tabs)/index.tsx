@@ -15,12 +15,18 @@ type GroupSummary = {
   id: number;
   name: string;
   emoji: string;
+  currency: string;
   members_count: number;
   your_balance: number;
 };
 
+// One entry per currency actually in play across the user's groups — groups
+// in different currencies can't be summed into a single number without an
+// exchange rate.
+type OverallBalance = { currency: string; net: number; owed: number; owe: number };
+
 type HomeData = {
-  overall: { net: number; owed: number; owe: number };
+  overall_by_currency: OverallBalance[];
   groups: GroupSummary[];
 };
 
@@ -62,6 +68,7 @@ export default function HomeScreen() {
   );
 
   const groups = home?.groups ?? [];
+  const overalls = home?.overall_by_currency ?? [];
 
   return (
     <View style={styles.root}>
@@ -82,17 +89,38 @@ export default function HomeScreen() {
           <View style={styles.hero}>
             <View style={styles.heroCircle} />
             <Text style={styles.heroLabel}>{t('home.overall')}</Text>
-            <Text style={styles.heroAmount}>{formatAmount(home?.overall.net ?? 0)}</Text>
-            <View style={styles.heroRow}>
-              <View style={styles.heroPill}>
-                <Text style={styles.heroPillLabel}>{t('home.youreOwed')}</Text>
-                <Text style={styles.heroPillValue}>{formatAmount(home?.overall.owed ?? 0)}</Text>
+            {overalls.length > 1 ? (
+              // Groups span more than one currency — no single number would
+              // mean anything, so list a net per currency instead.
+              <View style={styles.heroMulti}>
+                {overalls.map((o) => (
+                  <View key={o.currency} style={styles.heroMultiRow}>
+                    <Text style={styles.heroMultiCurrency}>{o.currency}</Text>
+                    <Text style={styles.heroMultiAmount}>{formatAmount(o.net, o.currency)}</Text>
+                  </View>
+                ))}
               </View>
-              <View style={styles.heroPill}>
-                <Text style={styles.heroPillLabel}>{t('home.youOwe')}</Text>
-                <Text style={styles.heroPillValue}>{formatAmount(home?.overall.owe ?? 0)}</Text>
-              </View>
-            </View>
+            ) : (
+              <>
+                <Text style={styles.heroAmount}>
+                  {formatAmount(overalls[0]?.net ?? 0, overalls[0]?.currency)}
+                </Text>
+                <View style={styles.heroRow}>
+                  <View style={styles.heroPill}>
+                    <Text style={styles.heroPillLabel}>{t('home.youreOwed')}</Text>
+                    <Text style={styles.heroPillValue}>
+                      {formatAmount(overalls[0]?.owed ?? 0, overalls[0]?.currency)}
+                    </Text>
+                  </View>
+                  <View style={styles.heroPill}>
+                    <Text style={styles.heroPillLabel}>{t('home.youOwe')}</Text>
+                    <Text style={styles.heroPillValue}>
+                      {formatAmount(overalls[0]?.owe ?? 0, overalls[0]?.currency)}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
 
           {/* groups header */}
@@ -146,7 +174,7 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.groupBalance}>
                     <Text style={[styles.groupAmount, { color }]}>
-                      {formatAmount(Math.abs(g.your_balance))}
+                      {formatAmount(Math.abs(g.your_balance), g.currency)}
                     </Text>
                     <Text style={[styles.groupWord, { color }]}>{word}</Text>
                   </View>
@@ -200,6 +228,10 @@ const makeStyles = (Palette: ThemeColors) =>
   heroPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, padding: 12 },
   heroPillLabel: { color: '#fff', opacity: 0.8, fontSize: 11.5 },
   heroPillValue: { color: '#fff', marginTop: 3, fontSize: 15, fontFamily: Font.monoSemibold },
+  heroMulti: { marginTop: 10, gap: 10 },
+  heroMultiRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  heroMultiCurrency: { color: '#fff', opacity: 0.82, fontSize: 13, fontFamily: Font.sansMedium },
+  heroMultiAmount: { color: '#fff', fontSize: 20, fontFamily: Font.monoSemibold, letterSpacing: -0.5 },
   groupsHeader: {
     flexDirection: 'row',
     alignItems: 'center',

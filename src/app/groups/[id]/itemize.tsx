@@ -9,7 +9,7 @@ import { CategoryPicker } from '@/components/category-picker';
 import { DEFAULT_CATEGORY } from '@/constants/categories';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
-import { formatAmount, fromCents, t, toCents } from '@/lib/i18n';
+import { currencySymbol, formatAmount, fromCents, t, toCents } from '@/lib/i18n';
 import type { ScannedItem } from '@/lib/receipt-scan';
 import { useColors } from '@/lib/settings';
 import { distributeCents } from '@/lib/split-math';
@@ -202,7 +202,7 @@ export default function ItemizeScreen() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.totalCard}>
             <Text style={styles.totalLabel}>{t('itemize.total')}</Text>
-            <Text style={styles.totalValue}>{formatAmount(total)}</Text>
+            <Text style={styles.totalValue}>{formatAmount(total, group.currency)}</Text>
           </View>
 
           <TextInput
@@ -248,7 +248,7 @@ export default function ItemizeScreen() {
                     style={styles.itemDescInput}
                   />
                   <View style={styles.itemAmountRow}>
-                    <Text style={styles.itemAmountDollar}>$</Text>
+                    <Text style={styles.itemAmountDollar}>{currencySymbol(group.currency)}</Text>
                     <TextInput
                       value={it.amountText}
                       onChangeText={(v) => updateItemAmount(i, v)}
@@ -282,7 +282,7 @@ export default function ItemizeScreen() {
             <>
               <View style={styles.taxHeader}>
                 <Text style={styles.sectionLabel}>{t('itemize.taxTip')}</Text>
-                <Text style={styles.taxAmount}>{formatAmount(extra)}</Text>
+                <Text style={styles.taxAmount}>{formatAmount(extra, group.currency)}</Text>
               </View>
               <View style={styles.segment}>
                 {(['proportional', 'equal'] as TaxMode[]).map((mode) => {
@@ -309,7 +309,7 @@ export default function ItemizeScreen() {
               <View key={m.id} style={styles.previewRow}>
                 <Avatar uri={m.avatar_url} name={m.name} size={28} color={avatarColor(m.id)} fontSize={12} />
                 <Text style={styles.previewName}>{m.name}</Text>
-                <Text style={styles.previewAmount}>{formatAmount(perPerson[m.id] ?? 0)}</Text>
+                <Text style={styles.previewAmount}>{formatAmount(perPerson[m.id] ?? 0, group.currency)}</Text>
               </View>
             ))}
           </View>

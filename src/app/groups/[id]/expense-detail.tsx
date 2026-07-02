@@ -8,6 +8,7 @@ import { BackButton } from '@/components/back-button';
 import { CommentsSection, type Comment } from '@/components/comments-section';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { categoryEmoji } from '@/constants/categories';
+import { DEFAULT_CURRENCY } from '@/constants/currencies';
 import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -44,6 +45,7 @@ export default function ExpenseDetailScreen() {
   const myId = myIdParam ? Number(myIdParam) : null;
 
   const [members, setMembers] = useState<Group['members']>([]);
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +57,10 @@ export default function ExpenseDetailScreen() {
     if (!id) return;
     api
       .get<Group>(`/api/v1/groups/${id}`)
-      .then((g) => setMembers(g.members))
+      .then((g) => {
+        setMembers(g.members);
+        setCurrency(g.currency);
+      })
       .catch(() => {});
   }, [id, api]);
 
@@ -155,7 +160,7 @@ export default function ExpenseDetailScreen() {
               <Text style={styles.heroEmoji}>{emoji}</Text>
             </View>
             <Text style={styles.heroDesc}>{expense.description}</Text>
-            <Text style={styles.heroAmount}>{formatAmount(expense.amount)}</Text>
+            <Text style={styles.heroAmount}>{formatAmount(expense.amount, currency)}</Text>
             <Text style={styles.heroMeta}>
               {t('groupDetail.paidBy', { name: expense.paid_by.name })} · {formatDate(expense.created_at)}
             </Text>
@@ -173,7 +178,7 @@ export default function ExpenseDetailScreen() {
                   fontSize={13}
                 />
                 <Text style={styles.rowName}>{memberName(s.user_id)}</Text>
-                <Text style={styles.rowAmount}>{formatAmount(s.amount)}</Text>
+                <Text style={styles.rowAmount}>{formatAmount(s.amount, currency)}</Text>
               </View>
             ))}
           </View>
@@ -193,14 +198,14 @@ export default function ExpenseDetailScreen() {
                         <Text style={styles.itemDesc} numberOfLines={1}>
                           {item.description}
                         </Text>
-                        <Text style={styles.itemAmount}>{formatAmount(item.amount)}</Text>
+                        <Text style={styles.itemAmount}>{formatAmount(item.amount, currency)}</Text>
                       </View>
                       <View style={styles.itemUsers}>
                         {item.users.map((u, i) => (
                           <View key={u.id} style={styles.itemUserChip}>
                             <Avatar uri={u.avatar_url} name={u.name} size={20} color={avatarColor(u.id)} fontSize={9} />
                             <Text style={styles.itemUserName}>{u.name}</Text>
-                            <Text style={styles.itemUserShare}>{formatAmount(shares[i])}</Text>
+                            <Text style={styles.itemUserShare}>{formatAmount(shares[i], currency)}</Text>
                           </View>
                         ))}
                       </View>

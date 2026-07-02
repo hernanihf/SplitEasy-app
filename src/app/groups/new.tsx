@@ -4,6 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
+import { CurrencyPicker } from '@/components/currency-picker';
+import { DEFAULT_CURRENCY } from '@/constants/currencies';
 import { Font, GROUP_EMOJIS, Radius, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
@@ -17,6 +19,7 @@ export default function NewGroupScreen() {
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState(GROUP_EMOJIS[0]);
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -25,7 +28,11 @@ export default function NewGroupScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      const group = await api.post<Group>('/api/v1/groups', { name: name.trim(), emoji });
+      const group = await api.post<Group>('/api/v1/groups', {
+        name: name.trim(),
+        emoji,
+        currency,
+      });
       router.replace(`/groups/${group.id}`);
     } catch {
       setError(t('newGroup.createError'));
@@ -70,6 +77,11 @@ export default function NewGroupScreen() {
               style={styles.input}
               autoFocus
             />
+          </View>
+
+          <Text style={styles.label}>{t('currencies.label')}</Text>
+          <View style={styles.currencyPicker}>
+            <CurrencyPicker value={currency} onChange={setCurrency} />
           </View>
 
           <View style={styles.hintCard}>
@@ -142,6 +154,7 @@ const makeStyles = (Palette: ThemeColors) =>
     marginBottom: 18,
   },
   input: { height: 50, fontSize: 15, color: Palette.ink, fontFamily: Font.sans },
+  currencyPicker: { marginBottom: 18 },
   hintCard: {
     flexDirection: 'row',
     alignItems: 'center',

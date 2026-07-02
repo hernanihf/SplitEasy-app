@@ -6,12 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
 import { CommentsSection, type Comment } from '@/components/comments-section';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DEFAULT_CURRENCY } from '@/constants/currencies';
 import { Font, tileBg, type ThemeColors } from '@/constants/design';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, i18n, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
-import type { Settlement } from '@/app/groups/[id]/index';
+import type { Group, Settlement } from '@/app/groups/[id]/index';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -21,10 +22,7 @@ function formatDate(iso: string): string {
 }
 
 export default function SettlementDetailScreen() {
-  // The group id is part of the URL path (this route is nested under
-  // groups/[id]/) but unused here — the settlement carries everything this
-  // screen needs directly.
-  const { settlement: settlementParam, myId: myIdParam } = useLocalSearchParams<{
+  const { id, settlement: settlementParam, myId: myIdParam } = useLocalSearchParams<{
     id: string;
     settlement?: string;
     myId?: string;
@@ -43,12 +41,21 @@ export default function SettlementDetailScreen() {
 
   const myId = myIdParam ? Number(myIdParam) : null;
 
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
   const [commentsError, setCommentsError] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    api
+      .get<Group>(`/api/v1/groups/${id}`)
+      .then((g) => setCurrency(g.currency))
+      .catch(() => {});
+  }, [id, api]);
 
   useEffect(() => {
     if (!settlement) return;
@@ -126,7 +133,7 @@ export default function SettlementDetailScreen() {
               <Text style={styles.heroEmoji}>💸</Text>
             </View>
             <Text style={styles.heroDesc}>{t('groupDetail.paidFromTo', { from: fromName, to: toName })}</Text>
-            <Text style={styles.heroAmount}>{formatAmount(settlement.amount)}</Text>
+            <Text style={styles.heroAmount}>{formatAmount(settlement.amount, currency)}</Text>
             <Text style={styles.heroMeta}>{formatDate(settlement.created_at)}</Text>
           </View>
 
