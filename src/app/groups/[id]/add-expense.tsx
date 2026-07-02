@@ -5,6 +5,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
+import { CategoryPicker } from '@/components/category-picker';
+import { DEFAULT_CATEGORY } from '@/constants/categories';
 import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { useColors } from '@/lib/settings';
@@ -25,11 +27,13 @@ export default function AddExpenseScreen() {
     id,
     description: prefillDesc,
     amount: prefillAmount,
+    category: prefillCategory,
     expense: expenseParam,
   } = useLocalSearchParams<{
     id: string;
     description?: string;
     amount?: string;
+    category?: string;
     expense?: string;
   }>();
   const { api } = useAuth();
@@ -55,6 +59,9 @@ export default function AddExpenseScreen() {
   const [group, setGroup] = useState<Group | null>(null);
   const [desc, setDesc] = useState(existing?.description ?? prefillDesc ?? '');
   const [amount, setAmount] = useState(existing ? fromCents(existing.amount) : prefillAmount ?? '');
+  const [category, setCategory] = useState<string>(
+    existing?.category ?? prefillCategory ?? DEFAULT_CATEGORY,
+  );
   const [paidBy, setPaidBy] = useState<number | null>(existing?.paid_by.id ?? null);
   const [method, setMethod] = useState<SplitMethod>(isEditMode ? 'fixed' : 'equal');
   const [values, setValues] = useState<Record<number, string>>(() => {
@@ -91,6 +98,7 @@ export default function AddExpenseScreen() {
             id: id as string,
             description: prefill.description,
             total: String(prefill.totalCents),
+            category: prefill.category,
             items: JSON.stringify(prefill.items),
           },
         });
@@ -98,6 +106,7 @@ export default function AddExpenseScreen() {
       }
       setDesc(prefill.description);
       setAmount(prefill.amount);
+      setCategory(prefill.category);
       setScanned(true);
     } catch {
       setError(t('scanReceipt.readError'));
@@ -160,6 +169,7 @@ export default function AddExpenseScreen() {
         await api.put(`/api/v1/expenses/${existing.id}`, {
           paid_by_id: paidBy,
           description: desc.trim(),
+          category,
           amount: amountCents,
           split_method: method,
           splits,
@@ -169,6 +179,7 @@ export default function AddExpenseScreen() {
           group_id: group.id,
           paid_by_id: paidBy,
           description: desc.trim(),
+          category,
           amount: amountCents,
           split_method: method,
           splits,
@@ -262,6 +273,12 @@ export default function AddExpenseScreen() {
               placeholderTextColor={Palette.muted}
               style={styles.descInput}
             />
+          </View>
+
+          {/* category */}
+          <Text style={styles.sectionLabel}>{t('categories.label')}</Text>
+          <View style={styles.categoryPicker}>
+            <CategoryPicker value={category} onChange={setCategory} />
           </View>
 
           {/* who paid */}
@@ -444,6 +461,7 @@ const makeStyles = (Palette: ThemeColors) =>
   descInput: { height: 48, fontSize: 15, color: Palette.ink, fontFamily: Font.sans },
   sectionLabel: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink, marginBottom: 9, marginLeft: 4 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
+  categoryPicker: { marginBottom: 18 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',

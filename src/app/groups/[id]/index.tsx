@@ -7,7 +7,8 @@ import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { Font, Radius, avatarColor, expenseEmoji, tileBg, type ThemeColors } from '@/constants/design';
+import { categoryEmoji } from '@/constants/categories';
+import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -29,6 +30,7 @@ type ExpenseItem = {
 export type Expense = {
   id: number;
   description: string;
+  category: string;
   amount: number;
   paid_by: { id: number; name: string };
   splits: { user_id: number; amount: number }[];
@@ -344,7 +346,7 @@ export default function GroupDetailScreen() {
                 // When I paid, the useful number is what others owe me (total minus
                 // my own share); otherwise it's what I owe.
                 const lent = ex.amount - myShare;
-                const emoji = expenseEmoji(ex.description);
+                const emoji = categoryEmoji(ex.category, ex.description);
                 return (
                   <Pressable
                     key={`e${ex.id}`}

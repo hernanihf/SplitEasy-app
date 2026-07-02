@@ -34,6 +34,7 @@ export default function ScanReceiptScreen() {
             id: id as string,
             description: prefill.description,
             total: String(prefill.totalCents),
+            category: prefill.category,
             items: JSON.stringify(prefill.items),
           },
         });
@@ -41,7 +42,12 @@ export default function ScanReceiptScreen() {
       }
       router.replace({
         pathname: '/groups/[id]/add-expense',
-        params: { id: id as string, description: prefill.description, amount: prefill.amount },
+        params: {
+          id: id as string,
+          description: prefill.description,
+          amount: prefill.amount,
+          category: prefill.category,
+        },
       });
     } catch {
       setError(t('scanReceipt.readError'));

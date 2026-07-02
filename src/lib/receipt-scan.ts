@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 
+import { DEFAULT_CATEGORY } from '@/constants/categories';
 import type { createApiClient } from '@/lib/api';
 import { t } from '@/lib/i18n';
 
@@ -10,6 +11,7 @@ type ReceiptScan = {
   merchant_name: string;
   date: string;
   total_amount: number;
+  category: string;
   items: { description: string; price: number }[];
 };
 
@@ -21,6 +23,7 @@ export type ScannedExpense = {
   description: string;
   amount: string; // dollar string for the amount input prefill
   totalCents: number;
+  category: string;
   items: ScannedItem[];
 };
 
@@ -48,6 +51,7 @@ export async function scanReceiptFile(
     description: scan.merchant_name || t('scanReceipt.defaultMerchant'),
     amount: String(scan.total_amount || ''),
     totalCents: Math.round((scan.total_amount || 0) * 100),
+    category: scan.category || DEFAULT_CATEGORY,
     items: (scan.items ?? [])
       .filter((it) => it.description && it.price > 0)
       .map((it) => ({ description: it.description, amount: Math.round(it.price * 100) })),

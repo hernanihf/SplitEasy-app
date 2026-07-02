@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, expenseEmoji, tileBg, type ThemeColors } from '@/constants/design';
+import { categoryEmoji } from '@/constants/categories';
+import { Font, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, i18n, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -16,6 +17,7 @@ type ActivityEvent = {
   group_name: string;
   group_emoji: string;
   title: string;
+  category?: string;
   actor_id: number;
   actor_name: string;
   amount: number;
@@ -121,7 +123,7 @@ export default function ActivityScreen() {
           <View style={styles.list}>
             {events.map((ev, i) => {
               const settlement = ev.type === 'settlement';
-              const emoji = settlement ? '💸' : expenseEmoji(ev.title);
+              const emoji = settlement ? '💸' : categoryEmoji(ev.category, ev.title);
               // Payments share a fixed tile colour so they match the group history.
               const tileKey = settlement ? 'payment' : ev.title;
               const key = `${ev.type}-${ev.id}-${i}`;

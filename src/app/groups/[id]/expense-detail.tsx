@@ -7,7 +7,8 @@ import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { CommentsSection, type Comment } from '@/components/comments-section';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { Font, Radius, avatarColor, expenseEmoji, tileBg, type ThemeColors } from '@/constants/design';
+import { categoryEmoji } from '@/constants/categories';
+import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, i18n, t } from '@/lib/i18n';
@@ -115,7 +116,7 @@ export default function ExpenseDetailScreen() {
     }
   };
 
-  const emoji = expenseEmoji(expense.description);
+  const emoji = categoryEmoji(expense.category, expense.description);
   const splits = (expense.splits ?? []).filter((s) => s.amount !== 0);
 
   return (

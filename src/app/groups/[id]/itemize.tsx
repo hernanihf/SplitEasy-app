@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
+import { CategoryPicker } from '@/components/category-picker';
+import { DEFAULT_CATEGORY } from '@/constants/categories';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, fromCents, t, toCents } from '@/lib/i18n';
@@ -25,12 +27,14 @@ export default function ItemizeScreen() {
     id,
     description,
     total: totalParam,
+    category: categoryParam,
     items: itemsParam,
     expense: expenseParam,
   } = useLocalSearchParams<{
     id: string;
     description?: string;
     total?: string;
+    category?: string;
     items?: string;
     expense?: string;
   }>();
@@ -65,6 +69,9 @@ export default function ItemizeScreen() {
 
   const [group, setGroup] = useState<Group | null>(null);
   const [desc, setDesc] = useState(existing?.description ?? description ?? '');
+  const [category, setCategory] = useState<string>(
+    existing?.category ?? categoryParam ?? DEFAULT_CATEGORY,
+  );
   const [paidBy, setPaidBy] = useState<number | null>(existing?.paid_by.id ?? null);
   const [items, setItems] = useState<EditableItem[]>(() => {
     const source = existing?.items ?? scannedItems;
@@ -155,6 +162,7 @@ export default function ItemizeScreen() {
       group_id: group.id,
       paid_by_id: paidBy,
       description: desc.trim() || t('scanReceipt.defaultMerchant'),
+      category,
       amount: total,
       split_method: 'fixed',
       splits: group.members.map((m) => ({ user_id: m.id, value: perPerson[m.id] ?? 0 })),
@@ -204,6 +212,10 @@ export default function ItemizeScreen() {
             placeholderTextColor={Palette.muted}
             style={styles.descInput}
           />
+
+          {/* category */}
+          <Text style={styles.sectionLabel}>{t('categories.label')}</Text>
+          <CategoryPicker value={category} onChange={setCategory} />
 
           {/* who paid */}
           <Text style={styles.sectionLabel}>{t('addExpense.whoPaid')}</Text>
