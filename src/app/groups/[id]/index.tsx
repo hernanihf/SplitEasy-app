@@ -7,6 +7,7 @@ import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { CategoryChart } from '@/components/category-chart';
 import { categoryEmoji } from '@/constants/categories';
 import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
@@ -67,7 +68,7 @@ export default function GroupDetailScreen() {
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [myId, setMyId] = useState<number | null>(null);
-  const [tab, setTab] = useState<'history' | 'balances'>('history');
+  const [tab, setTab] = useState<'history' | 'balances' | 'stats'>('history');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -146,6 +147,21 @@ export default function GroupDetailScreen() {
     ];
     return items.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   }, [expenses, settlements]);
+
+  // Total group spend per category (settlements aren't spending, so they're
+  // excluded), largest first — powers the spending chart.
+  const categoryBreakdown = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const e of expenses) {
+      const slug = e.category || 'other';
+      totals.set(slug, (totals.get(slug) ?? 0) + e.amount);
+    }
+    const slices = [...totals.entries()]
+      .map(([slug, amount]) => ({ slug, amount }))
+      .sort((a, b) => b.amount - a.amount);
+    const total = slices.reduce((sum, s) => sum + s.amount, 0);
+    return { slices, total };
+  }, [expenses]);
 
   const handleShare = useCallback(async () => {
     let url = inviteUrl;
@@ -286,6 +302,13 @@ export default function GroupDetailScreen() {
               style={[styles.tab, tab === 'balances' && styles.tabActive]}>
               <Text style={[styles.tabText, tab === 'balances' && styles.tabTextActive]}>
                 {t('groupDetail.balances')}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setTab('stats')}
+              style={[styles.tab, tab === 'stats' && styles.tabActive]}>
+              <Text style={[styles.tabText, tab === 'stats' && styles.tabTextActive]}>
+                {t('groupDetail.spending')}
               </Text>
             </Pressable>
           </View>
@@ -450,6 +473,12 @@ export default function GroupDetailScreen() {
               )}
             </View>
           )}
+
+          {tab === 'stats' && (
+            <View style={styles.statsPanel}>
+              <CategoryChart slices={categoryBreakdown.slices} total={categoryBreakdown.total} />
+            </View>
+          )}
         </ScrollView>
 
         {/* FAB */}
@@ -530,6 +559,7 @@ const makeStyles = (Palette: ThemeColors) =>
   tabText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.muted3 },
   tabTextActive: { color: Palette.bg },
   list: { paddingHorizontal: 20, paddingTop: 16, gap: 9 },
+  statsPanel: { paddingHorizontal: 24, paddingTop: 20 },
   expenseCard: {
     backgroundColor: Palette.card,
     borderWidth: 1,
