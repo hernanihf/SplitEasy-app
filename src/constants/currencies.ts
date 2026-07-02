@@ -7,12 +7,9 @@
 export const CURRENCIES = [
   { code: 'USD', flag: '🇺🇸' },
   { code: 'ARS', flag: '🇦🇷' },
-  { code: 'EUR', flag: '🇪🇺' },
   { code: 'BRL', flag: '🇧🇷' },
-  { code: 'CLP', flag: '🇨🇱' },
-  { code: 'UYU', flag: '🇺🇾' },
   { code: 'MXN', flag: '🇲🇽' },
-  { code: 'COP', flag: '🇨🇴' },
+  { code: 'EUR', flag: '🇪🇺' },
 ] as const;
 
 export type CurrencyCode = (typeof CURRENCIES)[number]['code'];
