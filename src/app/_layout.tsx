@@ -12,7 +12,7 @@ import {
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { AppLoading } from '@/components/app-loading';
@@ -23,8 +23,30 @@ import { SettingsProvider, useSettings } from '@/lib/settings';
 // viewports we centre it in a phone-sized column instead of stretching.
 const MAX_WIDTH = 480;
 
+// Keep the splash up at least this long. On warm launches (cached bundle,
+// stored session) fonts/settings/auth all resolve within a frame or two of
+// hydration, so without a floor the animated logo flashes away before it's
+// ever perceived — the launch reads as the OS's static splash jumping
+// straight into the app.
+const MIN_SPLASH_MS = 1200;
+const APP_START = Date.now();
+
+function useMinSplashHold(): boolean {
+  const [holding, setHolding] = useState(Date.now() - APP_START < MIN_SPLASH_MS);
+  useEffect(() => {
+    if (!holding) return;
+    const timer = setTimeout(
+      () => setHolding(false),
+      Math.max(0, MIN_SPLASH_MS - (Date.now() - APP_START)),
+    );
+    return () => clearTimeout(timer);
+  }, [holding]);
+  return holding;
+}
+
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { token, isLoading } = useAuth();
+  const holdingSplash = useMinSplashHold();
   const segments = useSegments();
   const router = useRouter();
 
@@ -41,7 +63,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [token, isLoading, segments]);
 
-  if (isLoading) return <AppLoading />;
+  if (isLoading || holdingSplash) return <AppLoading />;
 
   return children;
 }
