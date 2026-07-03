@@ -95,8 +95,11 @@ const translations = {
       deleteSettlementTitle: 'Delete this payment?',
       deleteSettlementMessage: "This can't be undone from the app.",
       deleteSettlementError: 'Could not delete the payment. Please try again.',
+      title: 'Group',
     },
     join: {
+      title: 'Join group',
+      description: "You've been invited to split expenses together on SplitEasy — tap to join.",
       joining: 'Joining the group…',
       error: 'This invite link is invalid or has expired.',
     },
@@ -324,8 +327,11 @@ const translations = {
       deleteSettlementTitle: '¿Borrar este pago?',
       deleteSettlementMessage: 'Esto no se puede deshacer desde la app.',
       deleteSettlementError: 'No se pudo borrar el pago. Intentá de nuevo.',
+      title: 'Grupo',
     },
     join: {
+      title: 'Unirse a un grupo',
+      description: 'Te invitaron a dividir gastos juntos en SplitEasy — tocá para unirte.',
       joining: 'Uniéndote al grupo…',
       error: 'Este link de invitación no es válido o expiró.',
     },

@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
+import { ScreenMeta } from '@/components/screen-meta';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
@@ -80,6 +81,7 @@ export default function ScanReceiptScreen() {
 
   return (
     <View style={styles.root}>
+      <ScreenMeta title={t('scanReceipt.title')} />
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.topbar}>
           <BackButton onPress={() => router.back()} />

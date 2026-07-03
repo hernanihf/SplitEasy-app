@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { ScreenMeta } from '@/components/screen-meta';
 import { DEFAULT_CURRENCY } from '@/constants/currencies';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
@@ -61,6 +62,7 @@ export default function SettleScreen() {
 
   return (
     <View style={styles.root}>
+      <ScreenMeta title={t('settle.title')} />
       <Pressable style={styles.dim} onPress={() => router.back()} />
       <SafeAreaView edges={['bottom']} style={styles.sheetWrap}>
         <View style={styles.sheet}>

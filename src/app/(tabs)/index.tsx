@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { InstallPrompt } from '@/components/install-prompt';
+import { ScreenMeta } from '@/components/screen-meta';
 import { Font, Radius, tileBg, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
@@ -93,6 +94,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.root}>
+      <ScreenMeta title={t('nav.groups')} />
       <SafeAreaView edges={['top']} style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* header */}

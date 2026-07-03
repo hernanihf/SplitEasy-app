@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ScreenMeta } from '@/components/screen-meta';
 import { categoryEmoji } from '@/constants/categories';
 import { Font, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
@@ -104,6 +105,7 @@ export default function ActivityScreen() {
 
   return (
     <View style={styles.root}>
+      <ScreenMeta title={t('nav.activity')} />
       <SafeAreaView edges={['top']} style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>

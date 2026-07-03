@@ -9,6 +9,7 @@ import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CategoryChart } from '@/components/category-chart';
+import { ScreenMeta } from '@/components/screen-meta';
 import { categoryEmoji } from '@/constants/categories';
 import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
@@ -227,6 +228,7 @@ export default function GroupDetailScreen() {
   if (loading && !group) {
     return (
       <View style={styles.root}>
+        <ScreenMeta title={t('groupDetail.title')} />
         <SafeAreaView edges={['top']} style={styles.center}>
           <ActivityIndicator color={Palette.green} />
         </SafeAreaView>
@@ -236,6 +238,7 @@ export default function GroupDetailScreen() {
   if (error || !group) {
     return (
       <View style={styles.root}>
+        <ScreenMeta title={t('groupDetail.title')} />
         <SafeAreaView edges={['top']} style={styles.center}>
           <Text style={styles.muted}>{error ?? t('groupDetail.notFound')}</Text>
         </SafeAreaView>
@@ -260,6 +263,7 @@ export default function GroupDetailScreen() {
 
   return (
     <View style={styles.root}>
+      <ScreenMeta title={group.name} />
       <SafeAreaView edges={['top']} style={styles.safe}>
         {/* top bar */}
         <View style={styles.topbar}>

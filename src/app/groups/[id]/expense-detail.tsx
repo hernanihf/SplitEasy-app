@@ -7,6 +7,7 @@ import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { CommentsSection, type Comment } from '@/components/comments-section';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { ScreenMeta } from '@/components/screen-meta';
 import { categoryEmoji } from '@/constants/categories';
 import { DEFAULT_CURRENCY } from '@/constants/currencies';
 import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
@@ -138,6 +139,7 @@ export default function ExpenseDetailScreen() {
 
   return (
     <View style={styles.root}>
+      <ScreenMeta title={t('expenseDetail.title')} />
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.topbar}>
           <BackButton onPress={() => router.back()} />

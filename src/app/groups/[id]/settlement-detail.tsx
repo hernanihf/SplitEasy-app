@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
 import { CommentsSection, type Comment } from '@/components/comments-section';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { ScreenMeta } from '@/components/screen-meta';
 import { DEFAULT_CURRENCY } from '@/constants/currencies';
 import { Font, tileBg, type ThemeColors } from '@/constants/design';
 import { ApiError } from '@/lib/api';
@@ -108,6 +109,7 @@ export default function SettlementDetailScreen() {
 
   return (
     <View style={styles.root}>
+      <ScreenMeta title={t('settlementDetail.title')} />
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.topbar}>
           <BackButton onPress={() => router.back()} />

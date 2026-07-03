@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
 import { CurrencyPicker } from '@/components/currency-picker';
+import { ScreenMeta } from '@/components/screen-meta';
 import { DEFAULT_CURRENCY } from '@/constants/currencies';
 import { Font, GROUP_EMOJIS, Radius, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
@@ -43,6 +44,7 @@ export default function NewGroupScreen() {
 
   return (
     <View style={styles.root}>
+      <ScreenMeta title={t('newGroup.title')} />
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.topbar}>
           <BackButton onPress={() => router.back()} />

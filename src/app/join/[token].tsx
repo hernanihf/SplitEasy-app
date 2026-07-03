@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { ScreenMeta } from '@/components/screen-meta';
 import { Font, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
@@ -31,6 +32,7 @@ export default function JoinScreen() {
 
   return (
     <View style={styles.root}>
+      <ScreenMeta title={t('join.title')} description={t('join.description')} />
       <Text style={[styles.text, error && styles.error]}>{error ?? t('join.joining')}</Text>
     </View>
   );
