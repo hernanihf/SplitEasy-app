@@ -37,6 +37,11 @@ const translations = {
       wordOwe: 'you owe',
       wordOwed: "you're owed",
       wordSettled: 'settled up',
+      deleteGroupTitle: 'Delete this group?',
+      deleteGroupMessage:
+        "This can't be undone — it deletes every expense, payment, comment, and receipt image in the group, for everyone.",
+      deleteGroupError: 'Could not delete the group. Please try again.',
+      deleteGroupNotAllowed: 'Only the group creator can delete it.',
     },
     activity: {
       title: 'Activity',
@@ -261,6 +266,11 @@ const translations = {
       wordOwe: 'debés',
       wordOwed: 'te deben',
       wordSettled: 'saldado',
+      deleteGroupTitle: '¿Borrar este grupo?',
+      deleteGroupMessage:
+        'Esto no se puede deshacer — borra todos los gastos, pagos, comentarios e imágenes de tickets del grupo, para todos.',
+      deleteGroupError: 'No se pudo borrar el grupo. Intentá de nuevo.',
+      deleteGroupNotAllowed: 'Solo quien creó el grupo puede borrarlo.',
     },
     activity: {
       title: 'Actividad',

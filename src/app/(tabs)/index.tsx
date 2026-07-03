@@ -1,12 +1,15 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { InstallPrompt } from '@/components/install-prompt';
 import { Font, Radius, tileBg, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
+import { ApiError } from '@/lib/api';
 import { formatAmount, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
 import { getItem, removeItem } from '@/lib/storage';
@@ -18,6 +21,7 @@ type GroupSummary = {
   currency: string;
   members_count: number;
   your_balance: number;
+  created_by: number;
 };
 
 // One entry per currency actually in play across the user's groups — groups
@@ -37,8 +41,11 @@ export default function HomeScreen() {
   const [home, setHome] = useState<HomeData | null>(null);
   const [name, setName] = useState<string>(t('profile.anonymous'));
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [myId, setMyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingGroupId, setDeletingGroupId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setError(null);
@@ -49,13 +56,27 @@ export default function HomeScreen() {
       .catch(() => setError(t('home.loadError')))
       .finally(() => setIsLoading(false));
     api
-      .get<{ name: string; avatar_url: string }>('/api/v1/users/me')
+      .get<{ id: number; name: string; avatar_url: string }>('/api/v1/users/me')
       .then((u) => {
+        setMyId(u.id);
         setName(u.name?.split(' ')[0] || t('profile.anonymous'));
         setAvatar(u.avatar_url || null);
       })
       .catch(() => {});
   }, [api]);
+
+  const handleDeleteGroup = async () => {
+    if (deletingGroupId == null) return;
+    setDeleteError(null);
+    try {
+      await api.delete(`/api/v1/groups/${deletingGroupId}`);
+      setDeletingGroupId(null);
+      load();
+    } catch (e) {
+      setDeletingGroupId(null);
+      setDeleteError(e instanceof ApiError && e.status === 403 ? t('home.deleteGroupNotAllowed') : t('home.deleteGroupError'));
+    }
+  };
 
   useFocusEffect(load);
 
@@ -146,6 +167,8 @@ export default function HomeScreen() {
             </View>
           )}
 
+          {deleteError && <Text style={styles.error}>{deleteError}</Text>}
+
           <View style={styles.groupList}>
             {groups.map((g) => {
               const owed = g.your_balance > 0;
@@ -156,9 +179,8 @@ export default function HomeScreen() {
                 : owe
                   ? t('home.wordOwe')
                   : t('home.wordSettled');
-              return (
+              const card = (
                 <Pressable
-                  key={g.id}
                   onPress={() => router.push(`/groups/${g.id}`)}
                   style={({ pressed }) => [styles.groupCard, pressed && styles.pressed]}>
                   <View style={[styles.tile, { backgroundColor: tileBg(g.id) }]}>
@@ -180,11 +202,43 @@ export default function HomeScreen() {
                   </View>
                 </Pressable>
               );
+
+              // Only the creator can delete a group — everyone else's row
+              // isn't even wrapped in a Swipeable, so there's nothing to
+              // swipe.
+              if (myId == null || g.created_by !== myId) {
+                return <View key={g.id}>{card}</View>;
+              }
+
+              return (
+                <Swipeable
+                  key={g.id}
+                  overshootRight={false}
+                  renderRightActions={(_progress, _translation, swipeableMethods) => (
+                    <Pressable
+                      onPress={() => {
+                        swipeableMethods.close();
+                        setDeletingGroupId(g.id);
+                      }}
+                      style={styles.deleteAction}>
+                      <Text style={styles.deleteActionText}>{t('common.delete')}</Text>
+                    </Pressable>
+                  )}>
+                  {card}
+                </Swipeable>
+              );
             })}
           </View>
         </ScrollView>
       </SafeAreaView>
       <InstallPrompt />
+      <ConfirmDialog
+        visible={deletingGroupId != null}
+        title={t('home.deleteGroupTitle')}
+        message={t('home.deleteGroupMessage')}
+        onCancel={() => setDeletingGroupId(null)}
+        onConfirm={handleDeleteGroup}
+      />
     </View>
   );
 }
@@ -274,4 +328,13 @@ const makeStyles = (Palette: ThemeColors) =>
   groupBalance: { alignItems: 'flex-end' },
   groupAmount: { fontSize: 14, fontFamily: Font.monoSemibold },
   groupWord: { marginTop: 3, fontSize: 11, opacity: 0.9 },
+  deleteAction: {
+    width: 84,
+    height: '100%',
+    borderRadius: 20,
+    backgroundColor: Palette.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteActionText: { color: '#fff', fontSize: 13.5, fontFamily: Font.sansSemibold },
 });

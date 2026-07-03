@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppLoading } from '@/components/app-loading';
 import { AuthProvider, useAuth } from '@/lib/auth';
@@ -120,10 +121,12 @@ export default function RootLayout() {
   }
 
   return (
-    <SettingsProvider>
-      <AuthProvider>
-        <ThemedShell />
-      </AuthProvider>
-    </SettingsProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SettingsProvider>
+        <AuthProvider>
+          <ThemedShell />
+        </AuthProvider>
+      </SettingsProvider>
+    </GestureHandlerRootView>
   );
 }
