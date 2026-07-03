@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
@@ -52,6 +52,10 @@ export default function ExpenseDetailScreen() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
   const [commentsError, setCommentsError] = useState(false);
+  // The list this screen was opened from never carries a receipt URL (the
+  // backend only signs one on the single-expense fetch, and a stored URL
+  // would go stale anyway) — fetched separately here.
+  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -73,6 +77,14 @@ export default function ExpenseDetailScreen() {
       .then((data) => setComments(data ?? []))
       .catch(() => setCommentsError(true))
       .finally(() => setCommentsLoading(false));
+  }, [expense, api]);
+
+  useEffect(() => {
+    if (!expense) return;
+    api
+      .get<Expense>(`/api/v1/expenses/${expense.id}`)
+      .then((fresh) => setReceiptImageUrl(fresh.receipt_image_url ?? null))
+      .catch(() => {});
   }, [expense, api]);
 
   const handleAddComment = async (body: string) => {
@@ -165,6 +177,15 @@ export default function ExpenseDetailScreen() {
               {t('groupDetail.paidBy', { name: expense.paid_by.name })} · {formatDate(expense.created_at)}
             </Text>
           </View>
+
+          {receiptImageUrl && (
+            <Pressable
+              onPress={() => Linking.openURL(receiptImageUrl)}
+              style={styles.receiptRow}>
+              <Text style={styles.receiptRowIcon}>🧾</Text>
+              <Text style={styles.receiptRowText}>{t('expenseDetail.viewReceipt')}</Text>
+            </Pressable>
+          )}
 
           <Text style={styles.sectionLabel}>{t('expenseDetail.split')}</Text>
           <View style={styles.card}>
@@ -269,6 +290,21 @@ const makeStyles = (Palette: ThemeColors) =>
     heroDesc: { fontSize: 18, fontFamily: Font.sansSemibold, color: Palette.ink, marginBottom: 2 },
     heroAmount: { fontSize: 30, fontFamily: Font.monoSemibold, color: Palette.ink, marginVertical: 2 },
     heroMeta: { fontSize: 13, color: Palette.muted2, fontFamily: Font.sans, marginTop: 2 },
+    receiptRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+      alignSelf: 'center',
+      paddingVertical: 9,
+      paddingHorizontal: 16,
+      borderRadius: Radius.pill,
+      backgroundColor: Palette.card,
+      borderWidth: 1,
+      borderColor: Palette.cardBorder,
+      marginBottom: 6,
+    },
+    receiptRowIcon: { fontSize: 15 },
+    receiptRowText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.ink },
     sectionLabel: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink, marginTop: 16, marginBottom: 8 },
     card: {
       backgroundColor: Palette.card,

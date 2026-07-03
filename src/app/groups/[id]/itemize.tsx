@@ -29,6 +29,7 @@ export default function ItemizeScreen() {
     total: totalParam,
     category: categoryParam,
     items: itemsParam,
+    receiptImagePath,
     expense: expenseParam,
   } = useLocalSearchParams<{
     id: string;
@@ -36,6 +37,7 @@ export default function ItemizeScreen() {
     total?: string;
     category?: string;
     items?: string;
+    receiptImagePath?: string;
     expense?: string;
   }>();
   const { api } = useAuth();
@@ -171,6 +173,11 @@ export default function ItemizeScreen() {
         amount: itemCents[i],
         user_ids: assignments[i] ?? [],
       })),
+      // Only ever present for a brand-new itemized expense created from a
+      // scan — editing doesn't re-scan, and the backend never sends the raw
+      // storage path back to the client, so there's nothing to preserve
+      // here (omitting it just leaves the existing image untouched).
+      ...(!isEditMode && receiptImagePath ? { receipt_image_path: receiptImagePath } : {}),
     };
     try {
       if (isEditMode && existing) {

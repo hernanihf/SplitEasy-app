@@ -28,12 +28,14 @@ export default function AddExpenseScreen() {
     description: prefillDesc,
     amount: prefillAmount,
     category: prefillCategory,
+    receiptImagePath: prefillReceiptImagePath,
     expense: expenseParam,
   } = useLocalSearchParams<{
     id: string;
     description?: string;
     amount?: string;
     category?: string;
+    receiptImagePath?: string;
     expense?: string;
   }>();
   const { api } = useAuth();
@@ -76,6 +78,12 @@ export default function AddExpenseScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(!!(prefillDesc || prefillAmount));
+  // Only ever set for a brand-new expense created from a scan — the scan UI
+  // is hidden in edit mode, and the backend never sends the raw storage path
+  // back to the client (only a short-lived signed URL), so there's nothing
+  // to "preserve" here: an edit that never re-scans just omits this field,
+  // which the backend already treats as "leave the existing image alone".
+  const [receiptImagePath, setReceiptImagePath] = useState<string | undefined>(prefillReceiptImagePath);
 
   // "Scan" opens the camera directly and fills the form in place — no detour
   // through the scan-receipt screen. That screen is only for the "Upload" flow.
@@ -100,6 +108,7 @@ export default function AddExpenseScreen() {
             total: String(prefill.totalCents),
             category: prefill.category,
             items: JSON.stringify(prefill.items),
+            ...(prefill.receiptImagePath ? { receiptImagePath: prefill.receiptImagePath } : {}),
           },
         });
         return;
@@ -107,6 +116,7 @@ export default function AddExpenseScreen() {
       setDesc(prefill.description);
       setAmount(prefill.amount);
       setCategory(prefill.category);
+      setReceiptImagePath(prefill.receiptImagePath);
       setScanned(true);
     } catch {
       setError(t('scanReceipt.readError'));
@@ -173,6 +183,7 @@ export default function AddExpenseScreen() {
           amount: amountCents,
           split_method: method,
           splits,
+          ...(receiptImagePath ? { receipt_image_path: receiptImagePath } : {}),
         });
       } else {
         await api.post('/api/v1/expenses', {
@@ -183,6 +194,7 @@ export default function AddExpenseScreen() {
           amount: amountCents,
           split_method: method,
           splits,
+          ...(receiptImagePath ? { receipt_image_path: receiptImagePath } : {}),
         });
       }
       // Go straight back to the group list rather than to expense-detail

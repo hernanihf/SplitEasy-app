@@ -36,6 +36,7 @@ export default function ScanReceiptScreen() {
             total: String(prefill.totalCents),
             category: prefill.category,
             items: JSON.stringify(prefill.items),
+            ...(prefill.receiptImagePath ? { receiptImagePath: prefill.receiptImagePath } : {}),
           },
         });
         return;
@@ -47,6 +48,7 @@ export default function ScanReceiptScreen() {
           description: prefill.description,
           amount: prefill.amount,
           category: prefill.category,
+          ...(prefill.receiptImagePath ? { receiptImagePath: prefill.receiptImagePath } : {}),
         },
       });
     } catch {

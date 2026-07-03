@@ -13,6 +13,7 @@ type ReceiptScan = {
   total_amount: number;
   category: string;
   items: { description: string; price: number }[];
+  receipt_image_path?: string;
 };
 
 /** A scanned line item, amount already converted to cents. */
@@ -25,6 +26,7 @@ export type ScannedExpense = {
   totalCents: number;
   category: string;
   items: ScannedItem[];
+  receiptImagePath?: string;
 };
 
 async function fileToFormData(uri: string, name: string, mimeType: string): Promise<FormData> {
@@ -55,6 +57,7 @@ export async function scanReceiptFile(
     items: (scan.items ?? [])
       .filter((it) => it.description && it.price > 0)
       .map((it) => ({ description: it.description, amount: Math.round(it.price * 100) })),
+    receiptImagePath: scan.receipt_image_path,
   };
 }
 
