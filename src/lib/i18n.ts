@@ -132,6 +132,9 @@ const translations = {
       addError: 'Could not add the expense. Check the details.',
       updateError: 'Could not update the expense. Check the details.',
       loading: 'Loading…',
+      discardTitle: 'Discard this expense?',
+      discardMessage: "What you've entered so far will be lost.",
+      discard: 'Discard',
     },
     scanReceipt: {
       defaultMerchant: 'Receipt',
@@ -372,6 +375,9 @@ const translations = {
       addError: 'No se pudo agregar el gasto. Revisá los datos.',
       updateError: 'No se pudo actualizar el gasto. Revisá los datos.',
       loading: 'Cargando…',
+      discardTitle: '¿Descartar este gasto?',
+      discardMessage: 'Se va a perder lo que cargaste hasta ahora.',
+      discard: 'Descartar',
     },
     scanReceipt: {
       defaultMerchant: 'Ticket',

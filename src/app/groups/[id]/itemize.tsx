@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { CategoryPicker } from '@/components/category-picker';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ScreenMeta } from '@/components/screen-meta';
 import { DEFAULT_CATEGORY } from '@/constants/categories';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
@@ -87,6 +88,7 @@ export default function ItemizeScreen() {
   const [taxMode, setTaxMode] = useState<TaxMode>('proportional');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -203,7 +205,10 @@ export default function ItemizeScreen() {
       <ScreenMeta title={t(isEditMode ? 'addExpense.editTitle' : 'itemize.title')} />
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.topbar}>
-          <BackButton onPress={() => router.back()} />
+          {/* Getting here always means real work is on the line — a scan
+              result (costly to redo) or an in-progress edit — so back
+              always confirms, unlike add-expense's blank-form fast path. */}
+          <BackButton onPress={() => setConfirmingDiscard(true)} />
           <Text style={styles.topTitle}>{t(isEditMode ? 'addExpense.editTitle' : 'itemize.title')}</Text>
           <View style={{ width: 38 }} />
         </View>
@@ -335,6 +340,14 @@ export default function ItemizeScreen() {
           </Pressable>
         </View>
       </SafeAreaView>
+      <ConfirmDialog
+        visible={confirmingDiscard}
+        title={t('addExpense.discardTitle')}
+        message={t('addExpense.discardMessage')}
+        confirmLabel={t('addExpense.discard')}
+        onCancel={() => setConfirmingDiscard(false)}
+        onConfirm={() => router.back()}
+      />
     </View>
   );
 }

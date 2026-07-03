@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
 import { CategoryPicker } from '@/components/category-picker';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ScreenMeta } from '@/components/screen-meta';
 import { DEFAULT_CATEGORY } from '@/constants/categories';
 import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
@@ -85,6 +86,25 @@ export default function AddExpenseScreen() {
   // to "preserve" here: an edit that never re-scans just omits this field,
   // which the backend already treats as "leave the existing image alone".
   const [receiptImagePath, setReceiptImagePath] = useState<string | undefined>(prefillReceiptImagePath);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+
+  // A new expense is "dirty" once the user typed something real; an edit is
+  // dirty once anything actually differs from what's being edited — either
+  // way, tapping back without asking would silently throw that away.
+  const isDirty = isEditMode
+    ? desc !== existing?.description ||
+      toCents(amount) !== existing?.amount ||
+      category !== existing?.category ||
+      paidBy !== existing?.paid_by.id
+    : desc.trim() !== '' || amount.trim() !== '';
+
+  const handleBack = () => {
+    if (isDirty) {
+      setConfirmingDiscard(true);
+    } else {
+      router.back();
+    }
+  };
 
   // "Scan" opens the camera directly and fills the form in place — no detour
   // through the scan-receipt screen. That screen is only for the "Upload" flow.
@@ -225,7 +245,7 @@ export default function AddExpenseScreen() {
       <ScreenMeta title={t(isEditMode ? 'addExpense.editTitle' : 'addExpense.title')} />
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.topbar}>
-          <BackButton onPress={() => router.back()} />
+          <BackButton onPress={handleBack} />
           <Text style={styles.topTitle}>{t(isEditMode ? 'addExpense.editTitle' : 'addExpense.title')}</Text>
           <View style={{ width: 38 }} />
         </View>
@@ -394,6 +414,14 @@ export default function AddExpenseScreen() {
           </Pressable>
         </View>
       </SafeAreaView>
+      <ConfirmDialog
+        visible={confirmingDiscard}
+        title={t('addExpense.discardTitle')}
+        message={t('addExpense.discardMessage')}
+        confirmLabel={t('addExpense.discard')}
+        onCancel={() => setConfirmingDiscard(false)}
+        onConfirm={() => router.back()}
+      />
     </View>
   );
 }
