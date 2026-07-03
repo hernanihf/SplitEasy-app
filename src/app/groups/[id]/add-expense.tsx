@@ -545,7 +545,7 @@ const makeStyles = (Palette: ThemeColors) =>
   },
   rowAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   rowAvatarText: { color: '#fff', fontSize: 13, fontFamily: Font.sansSemibold },
-  rowName: { flex: 1, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
+  rowName: { flex: 1, minWidth: 0, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
   rowDisplay: { fontFamily: Font.monoSemibold, fontSize: 14, color: Palette.ink },
   rowInputBox: {
     flexDirection: 'row',

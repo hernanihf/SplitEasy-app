@@ -172,7 +172,7 @@ const makeStyles = (Palette: ThemeColors) =>
       paddingVertical: 9,
     },
     bubbleHead: { flexDirection: 'row', alignItems: 'baseline', gap: 7 },
-    author: { flex: 1, fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink },
+    author: { flex: 1, minWidth: 0, fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink },
     date: { fontSize: 11, color: Palette.faint },
     body: { marginTop: 3, fontSize: 13.5, color: Palette.ink, fontFamily: Font.sans, lineHeight: 18 },
     deleteBtn: {

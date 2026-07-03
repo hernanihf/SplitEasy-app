@@ -200,7 +200,7 @@ export default function ExpenseDetailScreen() {
                   color={avatarColor(s.user_id)}
                   fontSize={13}
                 />
-                <Text style={styles.rowName}>{memberName(s.user_id)}</Text>
+                <Text style={styles.rowName} numberOfLines={1}>{memberName(s.user_id)}</Text>
                 <Text style={styles.rowAmount}>{formatAmount(s.amount, currency)}</Text>
               </View>
             ))}
@@ -324,11 +324,11 @@ const makeStyles = (Palette: ThemeColors) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: Palette.divider,
     },
-    rowName: { flex: 1, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
+    rowName: { flex: 1, minWidth: 0, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
     rowAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink },
     itemRow: { paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Palette.divider },
     itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    itemDesc: { flex: 1, fontSize: 14.5, fontFamily: Font.sansMedium, color: Palette.ink },
+    itemDesc: { flex: 1, minWidth: 0, fontSize: 14.5, fontFamily: Font.sansMedium, color: Palette.ink },
     itemAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink, marginLeft: 8 },
     itemUsers: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 9 },
     itemUserChip: {

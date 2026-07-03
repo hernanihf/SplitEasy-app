@@ -322,7 +322,7 @@ export default function ItemizeScreen() {
             {group.members.map((m) => (
               <View key={m.id} style={styles.previewRow}>
                 <Avatar uri={m.avatar_url} name={m.name} size={28} color={avatarColor(m.id)} fontSize={12} />
-                <Text style={styles.previewName}>{m.name}</Text>
+                <Text style={styles.previewName} numberOfLines={1}>{m.name}</Text>
                 <Text style={styles.previewAmount}>{formatAmount(perPerson[m.id] ?? 0, group.currency)}</Text>
               </View>
             ))}
@@ -412,8 +412,19 @@ const makeStyles = (Palette: ThemeColors) =>
     },
     itemRow: { paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: Palette.divider },
     itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-    itemDescInput: { flex: 1, fontSize: 14.5, fontFamily: Font.sansMedium, color: Palette.ink, paddingVertical: 4 },
-    itemAmountRow: { flexDirection: 'row', alignItems: 'center' },
+    // minWidth: 0 overrides the flex item default of min-width: auto, which
+    // sizes to content and ignores flex: 1 — without it, a long item name
+    // refuses to shrink and pushes the amount off the right edge on a
+    // narrow phone instead of wrapping the row.
+    itemDescInput: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: 14.5,
+      fontFamily: Font.sansMedium,
+      color: Palette.ink,
+      paddingVertical: 4,
+    },
+    itemAmountRow: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
     itemAmountDollar: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.muted, marginRight: 1 },
     itemAmountInput: {
       fontSize: 14,
@@ -446,7 +457,7 @@ const makeStyles = (Palette: ThemeColors) =>
     segmentText: { fontSize: 13.5, fontFamily: Font.sansMedium, color: Palette.muted2 },
     segmentTextActive: { color: Palette.ink, fontFamily: Font.sansSemibold },
     previewRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 10 },
-    previewName: { flex: 1, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
+    previewName: { flex: 1, minWidth: 0, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
     previewAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink },
     error: { color: Palette.red, fontSize: 13, marginTop: 12, textAlign: 'center' },
     footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10 },
