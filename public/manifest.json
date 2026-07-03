@@ -51,5 +51,29 @@
       "form_factor": "narrow",
       "label": "Add an expense and split it in seconds"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "New expense",
+      "short_name": "New expense",
+      "description": "Add an expense to the group you had open last",
+      "url": "/shortcut/add-expense",
+      "icons": [{ "src": "/icons/pwa-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "View balance",
+      "short_name": "Balance",
+      "description": "See your balance in the group you had open last",
+      "url": "/shortcut/balance",
+      "icons": [{ "src": "/icons/pwa-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [{ "name": "receipt", "accept": ["image/*"] }]
+    }
+  }
 }

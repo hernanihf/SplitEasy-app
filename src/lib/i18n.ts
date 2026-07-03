@@ -34,6 +34,7 @@ const translations = {
       empty: 'No groups yet.',
       emptyHint: 'Create one to start sharing expenses.',
       loadError: 'Could not load your data.',
+      slowLoadHint: 'Waking up the server, this can take a few seconds…',
       wordOwe: 'you owe',
       wordOwed: "you're owed",
       wordSettled: 'settled up',
@@ -212,6 +213,13 @@ const translations = {
       EUR: 'Euro',
     },
     auth: { signingIn: 'Signing in…' },
+    shortcut: { loading: 'Opening…' },
+    shareTarget: {
+      chooseGroup: 'Which group is this for?',
+      noFile: 'No image was shared. Try sharing again from your photos.',
+      scanning: 'Reading the receipt…',
+      scanError: "We couldn't read the receipt. Try again from Add expense.",
+    },
     newGroup: {
       title: 'New group',
       emoji: 'Icon',
@@ -266,6 +274,7 @@ const translations = {
       empty: 'Todavía no tenés grupos.',
       emptyHint: 'Creá uno para empezar a compartir gastos.',
       loadError: 'No se pudieron cargar tus datos.',
+      slowLoadHint: 'Despertando el servidor, esto puede tardar unos segundos…',
       wordOwe: 'debés',
       wordOwed: 'te deben',
       wordSettled: 'saldado',
@@ -444,6 +453,13 @@ const translations = {
       EUR: 'Euro',
     },
     auth: { signingIn: 'Iniciando sesión…' },
+    shortcut: { loading: 'Abriendo…' },
+    shareTarget: {
+      chooseGroup: '¿Para qué grupo es?',
+      noFile: 'No se compartió ninguna imagen. Probá compartir de nuevo desde tus fotos.',
+      scanning: 'Leyendo el ticket…',
+      scanError: 'No pudimos leer el ticket. Probá de nuevo desde Agregar gasto.',
+    },
     newGroup: {
       title: 'Nuevo grupo',
       emoji: 'Ícono',

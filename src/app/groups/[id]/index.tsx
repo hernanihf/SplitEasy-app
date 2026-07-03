@@ -14,6 +14,7 @@ import { categoryEmoji } from '@/constants/categories';
 import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
+import { rememberLastGroup } from '@/lib/last-group';
 import { useColors } from '@/lib/settings';
 
 export type Group = {
@@ -65,7 +66,7 @@ type HistoryItem =
   | { kind: 'payment'; date: string; settlement: Settlement };
 
 export default function GroupDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, tab: tabParam } = useLocalSearchParams<{ id: string; tab?: string }>();
   const { api } = useAuth();
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
@@ -75,7 +76,11 @@ export default function GroupDetailScreen() {
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [myId, setMyId] = useState<number | null>(null);
-  const [tab, setTab] = useState<'history' | 'balances' | 'stats'>('history');
+  // A shortcut can deep-link straight to the balances tab (?tab=balances);
+  // any other/missing value falls back to the default history view.
+  const [tab, setTab] = useState<'history' | 'balances' | 'stats'>(
+    tabParam === 'balances' ? 'balances' : 'history',
+  );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -103,6 +108,7 @@ export default function GroupDetailScreen() {
         setSettlements(st ?? []);
         setDebts(d ?? []);
         setMyId(me.id);
+        rememberLastGroup(g.id);
       })
       .catch(() => setError(t('groupDetail.loadError')))
       .finally(() => setLoading(false));

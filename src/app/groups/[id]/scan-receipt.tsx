@@ -10,7 +10,7 @@ import { ScreenMeta } from '@/components/screen-meta';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
-import { assetToFile, scanReceiptFile } from '@/lib/receipt-scan';
+import { assetToFile, navigateAfterScan, scanReceiptFile } from '@/lib/receipt-scan';
 import { useColors } from '@/lib/settings';
 
 // Only the "Upload" flow (gallery / PDF) lands here. "Scan" opens the camera
@@ -28,30 +28,7 @@ export default function ScanReceiptScreen() {
     setError(null);
     try {
       const prefill = await scanReceiptFile(api, uri, name, mimeType);
-      if (prefill.items.length > 0) {
-        router.replace({
-          pathname: '/groups/[id]/itemize',
-          params: {
-            id: id as string,
-            description: prefill.description,
-            total: String(prefill.totalCents),
-            category: prefill.category,
-            items: JSON.stringify(prefill.items),
-            ...(prefill.receiptImagePath ? { receiptImagePath: prefill.receiptImagePath } : {}),
-          },
-        });
-        return;
-      }
-      router.replace({
-        pathname: '/groups/[id]/add-expense',
-        params: {
-          id: id as string,
-          description: prefill.description,
-          amount: prefill.amount,
-          category: prefill.category,
-          ...(prefill.receiptImagePath ? { receiptImagePath: prefill.receiptImagePath } : {}),
-        },
-      });
+      navigateAfterScan(id as string, prefill);
     } catch {
       setError(t('scanReceipt.readError'));
       setScanning(false);

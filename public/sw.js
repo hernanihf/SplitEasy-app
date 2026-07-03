@@ -17,8 +17,34 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Stashes a shared image in Cache Storage so the /share-target page (a
+// plain GET navigation, with full access to AsyncStorage and app state) can
+// pick it up afterward — a service worker can only answer the OS share
+// sheet's POST with a redirect, it can't hand the file straight to a
+// client-side route change.
+const SHARE_TARGET_CACHE = 'spliteasy-share-target';
+const SHARED_RECEIPT_URL = '/shared-receipt';
+
+async function handleShareTarget(request) {
+  const formData = await request.formData();
+  const file = formData.get('receipt');
+  const cache = await caches.open(SHARE_TARGET_CACHE);
+  if (file && typeof file === 'object' && file.size > 0) {
+    await cache.put(SHARED_RECEIPT_URL, new Response(file, { headers: { 'Content-Type': file.type || 'application/octet-stream' } }));
+  } else {
+    await cache.delete(SHARED_RECEIPT_URL);
+  }
+  return Response.redirect('/share-target?shared=1', 303);
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+
+  if (request.method === 'POST' && new URL(request.url).pathname === '/share-target') {
+    event.respondWith(handleShareTarget(request));
+    return;
+  }
+
   if (request.method !== 'GET') return;
 
   // App-shell style: serve the cached shell for navigations when offline.
