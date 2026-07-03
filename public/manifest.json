@@ -28,5 +28,28 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home.png",
+      "sizes": "750x1624",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "See every group's balance at a glance"
+    },
+    {
+      "src": "/screenshots/group.png",
+      "sizes": "750x1624",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Track who paid what and who owes who"
+    },
+    {
+      "src": "/screenshots/add-expense.png",
+      "sizes": "750x1624",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Add an expense and split it in seconds"
+    }
   ]
 }
