@@ -1,15 +1,16 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
+import { isPushSupported, requestPermissionAndSubscribe } from '@/lib/push';
 import { useColors, useSettings, type ThemePref } from '@/lib/settings';
 
-type Me = { id: number; name: string; email: string; avatar_url: string };
+type Me = { id: number; name: string; email: string; avatar_url: string; push_enabled: boolean };
 
 const THEME_CYCLE: ThemePref[] = ['system', 'light', 'dark'];
 const THEME_GLYPH: Record<ThemePref, string> = { system: '🌓', light: '☀️', dark: '🌙' };
@@ -20,6 +21,9 @@ export default function ProfileScreen() {
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const [me, setMe] = useState<Me | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState(false);
+  const notifSupported = useMemo(() => isPushSupported(), []);
 
   useFocusEffect(
     useCallback(() => {
@@ -35,6 +39,30 @@ export default function ProfileScreen() {
   const cycleTheme = () => {
     const next = THEME_CYCLE[(THEME_CYCLE.indexOf(themePref) + 1) % THEME_CYCLE.length];
     setThemePref(next);
+  };
+
+  const togglePush = async (value: boolean) => {
+    if (!me || pushBusy) return;
+    setPushBusy(true);
+    setPushError(false);
+    try {
+      if (value) {
+        // Only asks the browser permission (and subscribes this device) when
+        // actually turning it on — disabling never touches the subscription,
+        // so re-enabling later doesn't need the permission prompt again.
+        const subscribed = await requestPermissionAndSubscribe(api);
+        if (!subscribed) {
+          setPushError(true);
+          return;
+        }
+      }
+      await api.patch('/api/v1/users/me/push-preference', { push_enabled: value });
+      setMe((prev) => (prev ? { ...prev, push_enabled: value } : prev));
+    } catch {
+      setPushError(true);
+    } finally {
+      setPushBusy(false);
+    }
   };
 
   return (
@@ -79,7 +107,32 @@ export default function ProfileScreen() {
               <Text style={styles.settingValue}>{t(`theme.${themePref}`)}</Text>
               <Text style={styles.chevron}>›</Text>
             </Pressable>
+
+            {notifSupported && me && (
+              <>
+                <View style={styles.rowDivider} />
+
+                {/* Notifications */}
+                <View style={styles.settingRow}>
+                  <View style={[styles.glyphBox, { backgroundColor: Palette.greenTint }]}>
+                    <Text style={styles.glyph}>🔔</Text>
+                  </View>
+                  <Text style={styles.settingLabel}>{t('profile.notifications')}</Text>
+                  <Switch
+                    value={me.push_enabled}
+                    onValueChange={togglePush}
+                    disabled={pushBusy}
+                    trackColor={{ true: Palette.green }}
+                  />
+                </View>
+              </>
+            )}
           </View>
+
+          {!notifSupported && (
+            <Text style={styles.notifNote}>{t('profile.notificationsUnsupported')}</Text>
+          )}
+          {pushError && <Text style={styles.notifError}>{t('profile.notificationsError')}</Text>}
 
           <Pressable
             onPress={signOut}
@@ -138,6 +191,20 @@ const makeStyles = (Palette: ThemeColors) =>
     settingLabel: { flex: 1, fontSize: 14.5, color: Palette.ink, fontFamily: Font.sansMedium },
     settingValue: { fontSize: 13.5, color: Palette.muted, fontFamily: Font.sansMedium },
     chevron: { fontSize: 16, color: Palette.faint },
+    notifNote: {
+      marginHorizontal: 24,
+      marginTop: 10,
+      fontSize: 12.5,
+      color: Palette.muted,
+      fontFamily: Font.sans,
+    },
+    notifError: {
+      marginHorizontal: 24,
+      marginTop: 10,
+      fontSize: 12.5,
+      color: Palette.red,
+      fontFamily: Font.sans,
+    },
     logout: {
       marginHorizontal: 20,
       marginTop: 18,

@@ -17,6 +17,7 @@ import { View } from 'react-native';
 
 import { AppLoading } from '@/components/app-loading';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { ensureSubscribed } from '@/lib/push';
 import { SettingsProvider, useSettings } from '@/lib/settings';
 
 // Max content width: the app is mobile-first, so on wide (web/desktop)
@@ -45,7 +46,7 @@ function useMinSplashHold(): boolean {
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { token, isLoading } = useAuth();
+  const { token, isLoading, api } = useAuth();
   const holdingSplash = useMinSplashHold();
   const segments = useSegments();
   const router = useRouter();
@@ -62,6 +63,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       router.replace('/');
     }
   }, [token, isLoading, segments]);
+
+  // Registers this device for push if the user already granted browser
+  // permission and has push enabled from another device — silent, never
+  // prompts (see push.web.ts).
+  useEffect(() => {
+    if (!token) return;
+    ensureSubscribed(api);
+  }, [token, api]);
 
   if (isLoading || holdingSplash) return <AppLoading />;
 

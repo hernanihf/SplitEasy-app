@@ -48,3 +48,43 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(request))
   );
 });
+
+// Payload shape sent by the backend (pushPayload in push_service.go):
+// {"title": string, "body": string, "data": {"url": string}}.
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    return;
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'SplitEasy', {
+      body: payload.body,
+      icon: '/icons/pwa-192.png',
+      data: payload.data,
+    })
+  );
+});
+
+// Clicking the notification focuses an already-open tab on the target URL if
+// one exists, otherwise opens a new one — the standard Web Push pattern,
+// since a plain `clients.openWindow` would stack duplicate tabs on repeat
+// clicks.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        const clientUrl = new URL(client.url);
+        if (clientUrl.origin === self.location.origin && 'focus' in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
+});

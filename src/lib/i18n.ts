@@ -52,6 +52,9 @@ const translations = {
       anonymous: 'You',
       language: 'Language',
       appearance: 'Appearance',
+      notifications: 'Notifications',
+      notificationsUnsupported: 'Notifications need the app added to your home screen (iOS 16.4+).',
+      notificationsError: 'Could not enable notifications — check your browser permission.',
     },
     theme: { system: 'System', light: 'Light', dark: 'Dark' },
     groupDetail: {
@@ -273,6 +276,9 @@ const translations = {
       anonymous: 'Vos',
       language: 'Idioma',
       appearance: 'Apariencia',
+      notifications: 'Notificaciones',
+      notificationsUnsupported: 'Las notificaciones necesitan que agregues la app a tu pantalla de inicio (iOS 16.4+).',
+      notificationsError: 'No se pudieron activar las notificaciones — revisá el permiso del navegador.',
     },
     theme: { system: 'Sistema', light: 'Claro', dark: 'Oscuro' },
     groupDetail: {
