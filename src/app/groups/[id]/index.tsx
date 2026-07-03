@@ -1,6 +1,7 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
@@ -81,6 +82,8 @@ export default function GroupDetailScreen() {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [deletingSettlementId, setDeletingSettlementId] = useState<number | null>(null);
   const [deletingSettlement, setDeletingSettlement] = useState(false);
+  const [deletingExpenseId, setDeletingExpenseId] = useState<number | null>(null);
+  const [deletingExpense, setDeletingExpense] = useState(false);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -206,6 +209,21 @@ export default function GroupDetailScreen() {
     }
   }, [api, deletingSettlementId, deletingSettlement, load]);
 
+  const confirmDeleteExpense = useCallback(async () => {
+    if (deletingExpenseId == null || deletingExpense) return;
+    setDeletingExpense(true);
+    try {
+      await api.delete(`/api/v1/expenses/${deletingExpenseId}`);
+      setDeletingExpenseId(null);
+      load();
+    } catch {
+      setDeletingExpenseId(null);
+      setErrorMsg(t('expenseDetail.deleteError'));
+    } finally {
+      setDeletingExpense(false);
+    }
+  }, [api, deletingExpenseId, deletingExpense, load]);
+
   if (loading && !group) {
     return (
       <View style={styles.root}>
@@ -325,9 +343,8 @@ export default function GroupDetailScreen() {
                 if (item.kind === 'payment') {
                   const s = item.settlement;
                   const canDelete = myId != null && (s.from_user_id === myId || s.to_user_id === myId);
-                  return (
+                  const card = (
                     <Pressable
-                      key={`s${s.id}`}
                       onPress={() =>
                         router.push({
                           pathname: '/groups/[id]/settlement-detail',
@@ -354,18 +371,32 @@ export default function GroupDetailScreen() {
                           {formatAmount(s.amount, group.currency)}
                         </Text>
                       </View>
-                      {canDelete && (
+                    </Pressable>
+                  );
+
+                  // Only a party to the payment can delete it (mirrors the
+                  // backend) — swipe is simply not offered to a bystander's
+                  // row rather than dead-ending into a 403.
+                  if (!canDelete) {
+                    return <View key={`s${s.id}`}>{card}</View>;
+                  }
+
+                  return (
+                    <Swipeable
+                      key={`s${s.id}`}
+                      overshootRight={false}
+                      renderRightActions={(_progress, _translation, swipeableMethods) => (
                         <Pressable
-                          onPress={(e) => {
-                            e.stopPropagation();
+                          onPress={() => {
+                            swipeableMethods.close();
                             setDeletingSettlementId(s.id);
                           }}
-                          hitSlop={8}
-                          style={styles.paymentDeleteBtn}>
-                          <Text style={styles.paymentDeleteBtnText}>✕</Text>
+                          style={styles.deleteAction}>
+                          <Text style={styles.deleteActionText}>{t('common.delete')}</Text>
                         </Pressable>
-                      )}
-                    </Pressable>
+                      )}>
+                      {card}
+                    </Swipeable>
                   );
                 }
                 const ex = item.expense;
@@ -375,9 +406,12 @@ export default function GroupDetailScreen() {
                 // my own share); otherwise it's what I owe.
                 const lent = ex.amount - myShare;
                 const emoji = categoryEmoji(ex.category, ex.description);
-                return (
+                // Mirrors the backend's own rule (isPayerOrSplitParticipant):
+                // only the payer or a split participant may delete it.
+                const canDeleteExpense =
+                  myId != null && (paidByMe || (ex.splits ?? []).some((s) => s.user_id === myId));
+                const expenseCard = (
                   <Pressable
-                    key={`e${ex.id}`}
                     onPress={() =>
                       router.push({
                         pathname: '/groups/[id]/expense-detail',
@@ -409,6 +443,28 @@ export default function GroupDetailScreen() {
                       ) : null}
                     </View>
                   </Pressable>
+                );
+
+                if (!canDeleteExpense) {
+                  return <View key={`e${ex.id}`}>{expenseCard}</View>;
+                }
+
+                return (
+                  <Swipeable
+                    key={`e${ex.id}`}
+                    overshootRight={false}
+                    renderRightActions={(_progress, _translation, swipeableMethods) => (
+                      <Pressable
+                        onPress={() => {
+                          swipeableMethods.close();
+                          setDeletingExpenseId(ex.id);
+                        }}
+                        style={styles.deleteAction}>
+                        <Text style={styles.deleteActionText}>{t('common.delete')}</Text>
+                      </Pressable>
+                    )}>
+                    {expenseCard}
+                  </Swipeable>
                 );
               })}
             </View>
@@ -516,6 +572,13 @@ export default function GroupDetailScreen() {
         onCancel={() => setDeletingSettlementId(null)}
         onConfirm={confirmDeleteSettlement}
       />
+      <ConfirmDialog
+        visible={deletingExpenseId != null}
+        title={t('expenseDetail.deleteTitle')}
+        message={t('expenseDetail.deleteMessage')}
+        onCancel={() => setDeletingExpenseId(null)}
+        onConfirm={confirmDeleteExpense}
+      />
     </View>
   );
 }
@@ -581,15 +644,15 @@ const makeStyles = (Palette: ThemeColors) =>
     gap: 13,
   },
   smallAvatar: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  paymentDeleteBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  deleteAction: {
+    width: 84,
+    height: '100%',
+    borderRadius: 16,
+    backgroundColor: Palette.red,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Palette.inputBg,
   },
-  paymentDeleteBtnText: { fontSize: 12, color: Palette.muted, fontFamily: Font.sansSemibold },
+  deleteActionText: { color: '#fff', fontSize: 13.5, fontFamily: Font.sansSemibold },
   expenseEmoji: { fontSize: 19 },
   expenseDesc: { fontSize: 14.5, fontFamily: Font.sansSemibold, color: Palette.ink },
   expenseMeta: { marginTop: 3, fontSize: 12, color: Palette.muted },
