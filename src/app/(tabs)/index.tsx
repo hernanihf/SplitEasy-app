@@ -1,5 +1,5 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { router, useFocusEffect, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,6 +38,7 @@ type HomeData = {
 
 export default function HomeScreen() {
   const { api } = useAuth();
+  const navigation = useNavigation();
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const [home, setHome] = useState<HomeData | null>(null);
@@ -50,6 +51,12 @@ export default function HomeScreen() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const isFirstLoad = isLoading && !home;
+
+  // The tab bar otherwise renders around the full-screen splash below —
+  // hide it for the one screen/moment that needs to own the whole viewport.
+  useEffect(() => {
+    navigation.setOptions({ tabBarStyle: isFirstLoad ? { display: 'none' } : undefined });
+  }, [navigation, isFirstLoad]);
 
   const load = useCallback(() => {
     setError(null);
@@ -103,7 +110,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.root}>
         <ScreenMeta title={t('nav.groups')} />
-        <AppLoading />
+        <AppLoading message={t('home.loadingMessage')} />
       </View>
     );
   }
