@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
-import { CURRENCIES } from '@/constants/currencies';
+import { ChevronIcon } from '@/components/chevron-icon';
+import { CURRENCIES, DEFAULT_CURRENCY } from '@/constants/currencies';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -11,19 +12,41 @@ type Props = {
   onChange: (code: string) => void;
 };
 
-// Only 8 currencies, so wrapping chips fit without needing a scroller.
+// Collapsed by default to just the current (suggested or already-picked)
+// currency — the full list only appears once you tap it, mirroring
+// CategoryPicker so both dropdowns in the new-group form behave the same.
 export function CurrencyPicker({ value, onChange }: Props) {
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
+  const [expanded, setExpanded] = useState(false);
+
+  if (!expanded) {
+    const current =
+      CURRENCIES.find((c) => c.code === value) ?? CURRENCIES.find((c) => c.code === DEFAULT_CURRENCY)!;
+    return (
+      <Pressable
+        onPress={() => setExpanded(true)}
+        style={[styles.chip, styles.chipActive, styles.chipCollapsed]}>
+        <Text style={styles.flag}>{current.flag}</Text>
+        <Text style={[styles.label, styles.labelActive]}>
+          {current.code} · {t(`currencies.${current.code}`)}
+        </Text>
+        <ChevronIcon color={Palette.greenDark} style={styles.chevron} />
+      </Pressable>
+    );
+  }
 
   return (
-    <View style={styles.row}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
       {CURRENCIES.map((c) => {
         const active = value === c.code;
         return (
           <Pressable
             key={c.code}
-            onPress={() => onChange(c.code)}
+            onPress={() => {
+              onChange(c.code);
+              setExpanded(false);
+            }}
             style={[styles.chip, active && styles.chipActive]}>
             <Text style={styles.flag}>{c.flag}</Text>
             <Text style={[styles.label, active && styles.labelActive]}>
@@ -32,13 +55,13 @@ export function CurrencyPicker({ value, onChange }: Props) {
           </Pressable>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
 const makeStyles = (Palette: ThemeColors) =>
   StyleSheet.create({
-    row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    row: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -50,7 +73,9 @@ const makeStyles = (Palette: ThemeColors) =>
       borderColor: Palette.cardBorder,
     },
     chipActive: { backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
+    chipCollapsed: { alignSelf: 'flex-start' },
     flag: { fontSize: 14 },
     label: { fontSize: 13.5, fontFamily: Font.sansMedium, color: Palette.ink },
     labelActive: { color: Palette.greenDark },
+    chevron: { marginLeft: 1 },
   });
