@@ -426,16 +426,22 @@ const makeStyles = (Palette: ThemeColors) =>
       color: Palette.ink,
       paddingVertical: 4,
     },
-    itemAmountRow: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
-    itemAmountDollar: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.muted, marginRight: 1 },
-    // Left-aligned and just wide enough for a typical amount — a right-aligned
-    // fixed-width box left a gap between the currency symbol and a short
-    // value (e.g. "US$" ... "31.4"), stealing width the item name could use.
+    // Fixed width + flex-end so every row's amount ends at the same right
+    // edge (a column), regardless of how long the item name or the currency
+    // code (e.g. "ARS" vs "$") is — the symbol and digits stay glued
+    // together as a group, just anchored to the box's right edge.
+    itemAmountRow: { flexDirection: 'row', alignItems: 'center', flexShrink: 0, width: 92, justifyContent: 'flex-end' },
+    itemAmountDollar: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.muted, marginRight: 3 },
+    // Without maxWidth, react-native-web resolves this <input>'s width against
+    // the viewport rather than its actual container, which — inside a
+    // fixed-width flex-end row — makes it shrink back down and clip the
+    // digits instead of overflowing.
     itemAmountInput: {
       fontSize: 14,
       fontFamily: Font.monoSemibold,
       color: Palette.ink,
       minWidth: 34,
+      maxWidth: 64,
       paddingVertical: 4,
     },
     assignRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 9 },

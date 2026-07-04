@@ -548,6 +548,19 @@ export function formatAmount(cents: number, currency: string = DEFAULT_CURRENCY)
 }
 
 /**
+ * Same grouping/decimals as formatAmount, but without the currency symbol —
+ * for layouts that show the currency code separately (e.g. stacked below a
+ * large number) rather than inline with it.
+ */
+export function formatAmountPlain(cents: number): string {
+  const numberLocale = i18n.locale === 'es' ? 'es-AR' : 'en-US';
+  return new Intl.NumberFormat(numberLocale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+/**
  * Just the symbol Intl would render for this currency (e.g. "$", "€",
  * "ARS") — for decorating an amount TextInput while the user types, where a
  * fully formatted number doesn't make sense.

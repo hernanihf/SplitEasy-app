@@ -296,6 +296,13 @@ export default function AddExpenseScreen() {
                 selectionColor={Palette.green}
                 style={styles.amountInput}
               />
+              {/* Mirrors the currency symbol's width on the other side so the
+                  row centers as [symbol][number][symbol] — otherwise the
+                  digits themselves sit right of center, most visibly with a
+                  wide code like "ARS" instead of a narrow "$". */}
+              <Text style={[styles.dollar, styles.dollarGhost]} aria-hidden>
+                {currencySymbol(group.currency)}
+              </Text>
             </View>
           </View>
 
@@ -483,8 +490,14 @@ const makeStyles = (Palette: ThemeColors) =>
   amountLabel: { fontSize: 12.5, color: Palette.muted, fontFamily: Font.sansMedium, marginBottom: 8 },
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   dollar: { fontFamily: Font.monoSemibold, fontSize: 30, color: Palette.ink },
+  dollarGhost: { opacity: 0 },
+  // maxWidth caps a runaway width react-native-web otherwise computes for
+  // this <input> (it was resolving to the viewport's width, not the card's —
+  // pushing the currency symbol before it off-screen and the digits far from
+  // true center) while minWidth keeps it from feeling cramped when empty.
   amountInput: {
     minWidth: 120,
+    maxWidth: 220,
     fontFamily: Font.monoSemibold,
     fontSize: 44,
     letterSpacing: -1.5,
