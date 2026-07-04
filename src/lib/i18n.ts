@@ -217,6 +217,11 @@ const translations = {
     },
     auth: { signingIn: 'Signing in…' },
     shortcut: { loading: 'Opening…' },
+    notFound: {
+      title: 'Page not found',
+      subtitle: "The page you're looking for doesn't exist or was moved.",
+      backHome: 'Back to home',
+    },
     shareTarget: {
       chooseGroup: 'Which group is this for?',
       noFile: 'No image was shared. Try sharing again from your photos.',
@@ -460,6 +465,11 @@ const translations = {
     },
     auth: { signingIn: 'Iniciando sesión…' },
     shortcut: { loading: 'Abriendo…' },
+    notFound: {
+      title: 'Página no encontrada',
+      subtitle: 'La página que buscás no existe o fue movida.',
+      backHome: 'Volver al inicio',
+    },
     shareTarget: {
       chooseGroup: '¿Para qué grupo es?',
       noFile: 'No se compartió ninguna imagen. Probá compartir de nuevo desde tus fotos.',
