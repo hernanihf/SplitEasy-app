@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { CATEGORIES } from '@/constants/categories';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
@@ -27,7 +28,19 @@ export function CategoryPicker({ value, onChange }: Props) {
         style={[styles.chip, styles.chipActive, styles.chipCollapsed]}>
         <Text style={styles.emoji}>{current.emoji}</Text>
         <Text style={[styles.label, styles.labelActive]}>{t(`categories.${current.slug}`)}</Text>
-        <Text style={styles.chevron}>⌄</Text>
+        {/* An SVG instead of a Unicode "⌄" — that glyph isn't in the Geist
+            font, so it falls back to whatever the OS supplies, and Android's
+            fallback renders it noticeably off-center against the label. */}
+        <Svg width={10} height={6} viewBox="0 0 10 6" style={styles.chevron}>
+          <Path
+            d="M1 1L5 5L9 1"
+            stroke={Palette.greenDark}
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </Svg>
       </Pressable>
     );
   }
@@ -73,5 +86,5 @@ const makeStyles = (Palette: ThemeColors) =>
     emoji: { fontSize: 14 },
     label: { fontSize: 13.5, fontFamily: Font.sansMedium, color: Palette.ink },
     labelActive: { color: Palette.greenDark },
-    chevron: { fontSize: 13, color: Palette.greenDark, marginLeft: -1 },
+    chevron: { marginLeft: 1 },
   });
