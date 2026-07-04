@@ -163,6 +163,36 @@ export default function AddExpenseScreen() {
   const amountNumber = useMemo(() => parseFloat(amount.replace(',', '.')) || 0, [amount]);
   const amountCents = useMemo(() => toCents(amount), [amount]);
 
+  // "Amounts" and "Percent" share the same `values` state but disagree on
+  // its unit (cents vs. percentage points) — switching tabs without
+  // converting leaves whatever was typed (or, in edit mode, the existing
+  // split's dollar amounts) displayed under the wrong unit, e.g. "$17.33"
+  // reappearing as "17.33%" instead of the real share of the total.
+  const changeMethod = (next: SplitMethod) => {
+    if (group && amountCents > 0) {
+      if (method === 'fixed' && next === 'percentage') {
+        setValues((prev) => {
+          const converted: Record<number, string> = {};
+          for (const m of group.members) {
+            const cents = toCents(prev[m.id] ?? '');
+            converted[m.id] = cents > 0 ? String(Math.round((cents / amountCents) * 10000) / 100) : '';
+          }
+          return converted;
+        });
+      } else if (method === 'percentage' && next === 'fixed') {
+        setValues((prev) => {
+          const converted: Record<number, string> = {};
+          for (const m of group.members) {
+            const pct = parseFloat((prev[m.id] ?? '').replace(',', '.')) || 0;
+            converted[m.id] = pct > 0 ? fromCents(Math.round((pct / 100) * amountCents)) : '';
+          }
+          return converted;
+        });
+      }
+    }
+    setMethod(next);
+  };
+
   const splitTotal = useMemo(() => {
     if (!group || method === 'equal') return 0;
     return group.members.reduce(
@@ -343,7 +373,7 @@ export default function AddExpenseScreen() {
               return (
                 <Pressable
                   key={mth.value}
-                  onPress={() => setMethod(mth.value)}
+                  onPress={() => changeMethod(mth.value)}
                   style={[styles.segmentBtn, active && styles.segmentBtnActive]}>
                   <Text
                     numberOfLines={1}
