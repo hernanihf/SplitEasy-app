@@ -426,12 +426,14 @@ const makeStyles = (Palette: ThemeColors) =>
     },
     itemAmountRow: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
     itemAmountDollar: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.muted, marginRight: 1 },
+    // Left-aligned and just wide enough for a typical amount — a right-aligned
+    // fixed-width box left a gap between the currency symbol and a short
+    // value (e.g. "US$" ... "31.4"), stealing width the item name could use.
     itemAmountInput: {
       fontSize: 14,
       fontFamily: Font.monoSemibold,
       color: Palette.ink,
-      minWidth: 46,
-      textAlign: 'right',
+      minWidth: 34,
       paddingVertical: 4,
     },
     assignRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 9 },

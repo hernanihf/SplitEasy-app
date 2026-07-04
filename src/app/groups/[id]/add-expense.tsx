@@ -588,9 +588,11 @@ const makeStyles = (Palette: ThemeColors) =>
   },
   rowPrefix: { fontSize: 13, color: Palette.muted },
   rowSuffix: { fontSize: 13, color: Palette.muted },
+  // Left-aligned so digits sit right after the currency symbol/prefix
+  // instead of leaving a gap when the value is short — same fix as
+  // itemize.tsx's itemAmountInput.
   rowInput: {
-    width: 64,
-    textAlign: 'right',
+    width: 52,
     fontFamily: Font.monoSemibold,
     fontSize: 14,
     color: Palette.ink,
