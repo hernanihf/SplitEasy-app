@@ -11,7 +11,18 @@ import { t } from '@/lib/i18n';
 import { isPushSupported, requestPermissionAndSubscribe } from '@/lib/push';
 import { useColors, useSettings, type ThemePref } from '@/lib/settings';
 
-type Me = { id: number; name: string; email: string; avatar_url: string; push_enabled: boolean };
+type Me = {
+  id: number;
+  name: string;
+  email: string;
+  avatar_url: string;
+  push_enabled: boolean;
+  push_expenses_enabled: boolean;
+  push_payments_enabled: boolean;
+  push_comments_enabled: boolean;
+};
+
+type PushCategoryField = 'push_expenses_enabled' | 'push_payments_enabled' | 'push_comments_enabled';
 
 const THEME_CYCLE: ThemePref[] = ['system', 'light', 'dark'];
 const THEME_GLYPH: Record<ThemePref, string> = { system: '🌓', light: '☀️', dark: '🌙' };
@@ -57,8 +68,36 @@ export default function ProfileScreen() {
           return;
         }
       }
-      await api.patch('/api/v1/users/me/push-preference', { push_enabled: value });
+      await api.patch('/api/v1/users/me/push-preference', {
+        push_enabled: value,
+        push_expenses_enabled: me.push_expenses_enabled,
+        push_payments_enabled: me.push_payments_enabled,
+        push_comments_enabled: me.push_comments_enabled,
+      });
       setMe((prev) => (prev ? { ...prev, push_enabled: value } : prev));
+    } catch {
+      setPushError(true);
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  // The backend always wants the full preference set on every PATCH — there's
+  // no partial-update endpoint — so each category toggle sends the other
+  // three fields unchanged alongside the one that actually flipped.
+  const toggleCategory = async (field: PushCategoryField, value: boolean) => {
+    if (!me || pushBusy) return;
+    setPushBusy(true);
+    setPushError(false);
+    const next = { ...me, [field]: value };
+    try {
+      await api.patch('/api/v1/users/me/push-preference', {
+        push_enabled: next.push_enabled,
+        push_expenses_enabled: next.push_expenses_enabled,
+        push_payments_enabled: next.push_payments_enabled,
+        push_comments_enabled: next.push_comments_enabled,
+      });
+      setMe(next);
     } catch {
       setPushError(true);
     } finally {
@@ -127,6 +166,43 @@ export default function ProfileScreen() {
                     trackColor={{ true: Palette.green }}
                   />
                 </View>
+
+                {/* Per-category sub-toggles — only meaningful, so only
+                    shown, once notifications are on at all. */}
+                {me.push_enabled && (
+                  <>
+                    <View style={[styles.rowDivider, styles.subRowDivider]} />
+                    <View style={[styles.settingRow, styles.subRow]}>
+                      <Text style={styles.subRowLabel}>{t('profile.notificationsExpenses')}</Text>
+                      <Switch
+                        value={me.push_expenses_enabled}
+                        onValueChange={(v) => toggleCategory('push_expenses_enabled', v)}
+                        disabled={pushBusy}
+                        trackColor={{ true: Palette.green }}
+                      />
+                    </View>
+                    <View style={[styles.rowDivider, styles.subRowDivider]} />
+                    <View style={[styles.settingRow, styles.subRow]}>
+                      <Text style={styles.subRowLabel}>{t('profile.notificationsPayments')}</Text>
+                      <Switch
+                        value={me.push_payments_enabled}
+                        onValueChange={(v) => toggleCategory('push_payments_enabled', v)}
+                        disabled={pushBusy}
+                        trackColor={{ true: Palette.green }}
+                      />
+                    </View>
+                    <View style={[styles.rowDivider, styles.subRowDivider]} />
+                    <View style={[styles.settingRow, styles.subRow]}>
+                      <Text style={styles.subRowLabel}>{t('profile.notificationsComments')}</Text>
+                      <Switch
+                        value={me.push_comments_enabled}
+                        onValueChange={(v) => toggleCategory('push_comments_enabled', v)}
+                        disabled={pushBusy}
+                        trackColor={{ true: Palette.green }}
+                      />
+                    </View>
+                  </>
+                )}
               </>
             )}
           </View>
@@ -188,6 +264,12 @@ const makeStyles = (Palette: ThemeColors) =>
     settingRow: { flexDirection: 'row', alignItems: 'center', gap: 13, padding: 15 },
     rowPressed: { opacity: 0.6 },
     rowDivider: { height: 1, backgroundColor: Palette.divider, marginLeft: 58 },
+    // Sub-toggles nested under "Notifications" — no icon box, indented
+    // further, and a slightly muted label to read as children of the row
+    // above rather than peers of it.
+    subRow: { paddingLeft: 58, paddingVertical: 13 },
+    subRowDivider: { marginLeft: 58 },
+    subRowLabel: { flex: 1, fontSize: 13.5, color: Palette.muted2, fontFamily: Font.sansMedium },
     glyphBox: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
     glyph: { fontSize: 14 },
     settingLabel: { flex: 1, fontSize: 14.5, color: Palette.ink, fontFamily: Font.sansMedium },
