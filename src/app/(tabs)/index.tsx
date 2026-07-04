@@ -1,12 +1,12 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppLoading } from '@/components/app-loading';
 import { Avatar } from '@/components/avatar';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { GroupListSkeleton, HeroSkeleton } from '@/components/home-skeleton';
 import { InstallPrompt } from '@/components/install-prompt';
 import { ScreenMeta } from '@/components/screen-meta';
 import { Font, Radius, tileBg, type ThemeColors } from '@/constants/design';
@@ -48,18 +48,8 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [deletingGroupId, setDeletingGroupId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showSlowHint, setShowSlowHint] = useState(false);
 
   const isFirstLoad = isLoading && !home;
-
-  // Render/Supabase free tier can take several seconds to wake from a cold
-  // start — the skeleton alone reads as frozen past ~1s, so a hint kicks in
-  // to explain the wait instead of leaving it a mystery.
-  useEffect(() => {
-    if (!isFirstLoad) return;
-    const timer = setTimeout(() => setShowSlowHint(true), 1200);
-    return () => clearTimeout(timer);
-  }, [isFirstLoad]);
 
   const load = useCallback(() => {
     setError(null);
@@ -105,6 +95,19 @@ export default function HomeScreen() {
   const groups = home?.groups ?? [];
   const overalls = home?.overall_by_currency ?? [];
 
+  // Stays on the same animated splash the app boots with — through a
+  // Render free-tier cold start this can take a while, but showing a
+  // half-populated Home (or a skeleton with nothing to actually display)
+  // is worse than one continuous "still loading" moment.
+  if (isFirstLoad) {
+    return (
+      <View style={styles.root}>
+        <ScreenMeta title={t('nav.groups')} />
+        <AppLoading />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <ScreenMeta title={t('nav.groups')} />
@@ -125,9 +128,7 @@ export default function HomeScreen() {
           <View style={styles.hero}>
             <View style={styles.heroCircle} />
             <Text style={styles.heroLabel}>{t('home.overall')}</Text>
-            {isFirstLoad ? (
-              <HeroSkeleton />
-            ) : overalls.length > 1 ? (
+            {overalls.length > 1 ? (
               // Groups span more than one currency — no single number would
               // mean anything, so list a net per currency instead.
               <View style={styles.heroMulti}>
@@ -170,13 +171,6 @@ export default function HomeScreen() {
           </View>
 
           {error && <Text style={styles.error}>{error}</Text>}
-
-          {isFirstLoad && (
-            <>
-              <GroupListSkeleton />
-              {showSlowHint && <Text style={styles.slowHint}>{t('home.slowLoadHint')}</Text>}
-            </>
-          )}
 
           {!isLoading && !error && groups.length === 0 && (
             <View style={styles.empty}>
@@ -315,13 +309,6 @@ const makeStyles = (Palette: ThemeColors) =>
   groupsTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
   newGroup: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.green },
   error: { paddingHorizontal: 24, color: Palette.red, fontSize: 13 },
-  slowHint: {
-    marginTop: 14,
-    paddingHorizontal: 24,
-    textAlign: 'center',
-    fontSize: 12.5,
-    color: Palette.muted,
-  },
   empty: {
     marginHorizontal: 20,
     backgroundColor: Palette.card,
