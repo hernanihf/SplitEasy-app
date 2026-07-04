@@ -291,11 +291,13 @@ export default function ItemizeScreen() {
             ))}
           </View>
 
-          {/* tax / tip */}
+          {/* tax / tip, or a discount when items sum to more than the total */}
           {extra !== 0 && (
             <>
               <View style={styles.taxHeader}>
-                <Text style={styles.sectionLabel}>{t('itemize.taxTip')}</Text>
+                <Text style={styles.sectionLabel}>
+                  {t(extra < 0 ? 'itemize.discount' : 'itemize.taxTip')}
+                </Text>
                 <Text style={styles.taxAmount}>{formatAmount(extra, group.currency)}</Text>
               </View>
               <View style={styles.segment}>

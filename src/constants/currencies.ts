@@ -14,4 +14,4 @@ export const CURRENCIES = [
 
 export type CurrencyCode = (typeof CURRENCIES)[number]['code'];
 
-export const DEFAULT_CURRENCY: CurrencyCode = 'USD';
+export const DEFAULT_CURRENCY: CurrencyCode = 'ARS';
