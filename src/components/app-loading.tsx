@@ -10,6 +10,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 
 import { Font, Palette } from '@/constants/design';
+import { useLoadingDots } from '@/lib/use-loading-dots';
 
 // Matches the PWA splash background so the OS splash hands off seamlessly to
 // this animated in-app loader while fonts/auth/settings initialize.
@@ -23,6 +24,7 @@ type AppLoadingProps = {
 };
 
 export function AppLoading({ message }: AppLoadingProps) {
+  const dots = useLoadingDots();
   // 0 = halves together & opaque, 1 = split apart & faded. Ping-pongs forever.
   // At rest (0) the logo is the full, solid circle, so it stays visible even if
   // the animation engine isn't running.
@@ -59,7 +61,7 @@ export function AppLoading({ message }: AppLoadingProps) {
           </Svg>
         </Animated.View>
       </View>
-      {message && <Text style={styles.message}>{message}</Text>}
+      {message && <Text style={styles.message}>{message + dots}</Text>}
     </View>
   );
 }

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Font, Palette } from '@/constants/design';
+import { useLoadingDots } from '@/lib/use-loading-dots';
 
 // Matches the PWA splash background so the OS splash hands off seamlessly to
 // this loader while fonts/auth/settings initialize.
@@ -70,6 +71,7 @@ type AppLoadingProps = {
 };
 
 export function AppLoading({ message }: AppLoadingProps) {
+  const dots = useLoadingDots();
   return (
     <View style={styles.root}>
       <View style={{ width: SIZE, height: SIZE }}>
@@ -84,7 +86,7 @@ export function AppLoading({ message }: AppLoadingProps) {
           </Svg>
         </View>
       </View>
-      {message && <Text style={styles.message}>{message}</Text>}
+      {message && <Text style={styles.message}>{message + dots}</Text>}
     </View>
   );
 }
