@@ -77,6 +77,10 @@ export default function AddExpenseScreen() {
     return initialValues;
   });
   const [error, setError] = useState<string | null>(null);
+  // Separate from `error` (which lives at the bottom of the form, next to
+  // the submit button) — a scan failure needs to be seen right where the
+  // Scan/Upload buttons are, not scrolled past several sections down.
+  const [scanError, setScanError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(!!(prefillDesc || prefillAmount));
@@ -110,13 +114,13 @@ export default function AddExpenseScreen() {
   // through the scan-receipt screen. That screen is only for the "Upload" flow.
   const scanFromCamera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) return setError(t('scanReceipt.cameraPermission'));
+    if (!permission.granted) return setScanError(t('scanReceipt.cameraPermission'));
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (result.canceled) return;
 
     const file = assetToFile(result.assets[0]);
     setScanning(true);
-    setError(null);
+    setScanError(null);
     try {
       const prefill = await scanReceiptFile(api, file.uri, file.name, file.mimeType);
       if (prefill.items.length > 0) {
@@ -140,7 +144,7 @@ export default function AddExpenseScreen() {
       setReceiptImagePath(prefill.receiptImagePath);
       setScanned(true);
     } catch {
-      setError(t('scanReceipt.readError'));
+      setScanError(t('scanReceipt.readError'));
     } finally {
       setScanning(false);
     }
@@ -333,6 +337,7 @@ export default function AddExpenseScreen() {
                 </Pressable>
               </View>
             )}
+            {scanError && <Text style={styles.scanError}>{scanError}</Text>}
           </View>
           )}
 
@@ -525,6 +530,7 @@ const makeStyles = (Palette: ThemeColors) =>
     justifyContent: 'center',
   },
   scanBtnText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.ink },
+  scanError: { color: Palette.red, fontSize: 12.5, marginTop: 10 },
   scannedRow: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   scannedIcon: {
     width: 42,
