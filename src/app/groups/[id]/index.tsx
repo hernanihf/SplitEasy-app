@@ -9,12 +9,21 @@ import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CategoryChart } from '@/components/category-chart';
+import {
+  FilterBadgeButton,
+  FilterChipRow,
+  FilterSection,
+  FilterSegment,
+  FilterSheet,
+  type FilterChipOption,
+} from '@/components/filter-sheet';
 import { OfflineBanner } from '@/components/offline-banner';
 import { ScreenMeta } from '@/components/screen-meta';
-import { categoryEmoji } from '@/constants/categories';
+import { CATEGORIES, categoryEmoji } from '@/constants/categories';
 import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
-import { formatAmount, t } from '@/lib/i18n';
+import { periodCutoff, type PeriodFilter } from '@/lib/date-filter';
+import { formatAmount, i18n, t } from '@/lib/i18n';
 import { rememberLastGroup } from '@/lib/last-group';
 import { cacheData, getCachedData } from '@/lib/offline-cache';
 import { getPendingExpenses, syncPendingExpenses, type PendingExpense } from '@/lib/offline-queue';
@@ -71,6 +80,33 @@ type HistoryItem =
 
 type GroupSnapshot = { group: Group; expenses: Expense[]; settlements: Settlement[]; debts: Debt[] };
 
+function ordinalSuffix(day: number): string {
+  if (day >= 11 && day <= 13) return 'th';
+  switch (day % 10) {
+    case 1:
+      return 'st';
+    case 2:
+      return 'nd';
+    case 3:
+      return 'rd';
+    default:
+      return 'th';
+  }
+}
+
+// "4th July" (en) / "4 de julio" (es) — Spanish dates don't use ordinals the
+// way English ones do, so the two locales get genuinely different shapes
+// rather than just a translated month name.
+function longDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  if (i18n.locale === 'es') {
+    return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long' }).format(d);
+  }
+  const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(d);
+  return `${d.getDate()}${ordinalSuffix(d.getDate())} ${month}`;
+}
+
 export default function GroupDetailScreen() {
   const { id, tab: tabParam } = useLocalSearchParams<{ id: string; tab?: string }>();
   const { api } = useAuth();
@@ -97,6 +133,11 @@ export default function GroupDetailScreen() {
   const [deletingExpenseId, setDeletingExpenseId] = useState<number | null>(null);
   const [deletingExpense, setDeletingExpense] = useState(false);
   const [pending, setPending] = useState<PendingExpense[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'expense' | 'settlement'>('all');
+  const [filterPeriod, setFilterPeriod] = useState<PeriodFilter>('all');
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [filterUserId, setFilterUserId] = useState<number | null>(null);
   // Lets the sync-then-reload step below call the latest `load` without
   // referencing the `load` const from inside its own definition.
   const loadRef = useRef<() => void>(() => {});
@@ -200,6 +241,61 @@ export default function GroupDetailScreen() {
     ];
     return items.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   }, [expenses, settlements, pending]);
+
+  // Filter option lists are derived from this group's own activity — no
+  // "Group" dimension here since we're already inside one.
+  const categoryOptions = useMemo(() => {
+    const present = new Set(expenses.map((e) => e.category).filter(Boolean));
+    return CATEGORIES.filter((c) => present.has(c.slug));
+  }, [expenses]);
+
+  const userOptions = useMemo(() => {
+    const map = new Map<number, string>();
+    expenses.forEach((e) => map.set(e.paid_by.id, e.paid_by.name));
+    settlements.forEach((s) => map.set(s.from_user_id, memberName(s.from_user_id)));
+    pending.forEach((p) => {
+      const member = group?.members.find((m) => m.id === p.payload.paid_by_id);
+      if (member) map.set(member.id, member.name);
+    });
+    return [...map.entries()].map(([uid, name]) => ({ id: uid, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [expenses, settlements, pending, group, memberName]);
+
+  const filteredHistory = useMemo(() => {
+    const cutoff = periodCutoff(filterPeriod);
+    return history.filter((item) => {
+      if (cutoff && new Date(item.date) < cutoff) return false;
+      if (item.kind === 'pending') {
+        if (filterType === 'settlement') return false;
+        if (filterCategory != null && item.pending.payload.category !== filterCategory) return false;
+        if (filterUserId != null && item.pending.payload.paid_by_id !== filterUserId) return false;
+        return true;
+      }
+      if (item.kind === 'payment') {
+        if (filterType === 'expense') return false;
+        if (filterCategory != null) return false;
+        if (filterUserId != null && item.settlement.from_user_id !== filterUserId) return false;
+        return true;
+      }
+      if (filterType === 'settlement') return false;
+      if (filterCategory != null && item.expense.category !== filterCategory) return false;
+      if (filterUserId != null && item.expense.paid_by.id !== filterUserId) return false;
+      return true;
+    });
+  }, [history, filterType, filterPeriod, filterCategory, filterUserId]);
+
+  const activeFilterCount = [
+    filterType !== 'all',
+    filterPeriod !== 'all',
+    filterCategory != null,
+    filterUserId != null,
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setFilterType('all');
+    setFilterPeriod('all');
+    setFilterCategory(null);
+    setFilterUserId(null);
+  };
 
   // Total group spend per category (settlements aren't spending, so they're
   // excluded), largest first — powers the spending chart.
@@ -386,9 +482,20 @@ export default function GroupDetailScreen() {
           </View>
 
           {tab === 'history' && (
-            <View style={styles.list}>
-              {history.length === 0 && <Text style={styles.muted}>{t('groupDetail.historyEmpty')}</Text>}
-              {history.map((item) => {
+            <>
+              <View style={styles.filtersRow}>
+                <FilterBadgeButton
+                  label={t('activity.filters')}
+                  count={activeFilterCount}
+                  onPress={() => setFiltersOpen(true)}
+                />
+              </View>
+              <View style={styles.list}>
+                {history.length === 0 && <Text style={styles.muted}>{t('groupDetail.historyEmpty')}</Text>}
+                {history.length > 0 && filteredHistory.length === 0 && (
+                  <Text style={styles.muted}>{t('activity.noMatches')}</Text>
+                )}
+                {filteredHistory.map((item) => {
                 if (item.kind === 'pending') {
                   const p = item.pending;
                   const emoji = categoryEmoji(p.payload.category, p.payload.description);
@@ -432,6 +539,7 @@ export default function GroupDetailScreen() {
                           {t('groupDetail.paidFromTo', {
                             from: memberName(s.from_user_id),
                             to: memberName(s.to_user_id),
+                            date: longDate(s.created_at),
                           })}
                         </Text>
                       </View>
@@ -495,8 +603,8 @@ export default function GroupDetailScreen() {
                       <Text style={styles.expenseDesc} numberOfLines={1}>
                         {ex.description}
                       </Text>
-                      <Text style={styles.expenseMeta}>
-                        {t('groupDetail.paidBy', { name: ex.paid_by.name })}
+                      <Text style={styles.expenseMeta} numberOfLines={1}>
+                        {t('groupDetail.paidBy', { name: ex.paid_by.name, date: longDate(ex.created_at) })}
                       </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
@@ -536,7 +644,8 @@ export default function GroupDetailScreen() {
                   </Swipeable>
                 );
               })}
-            </View>
+              </View>
+            </>
           )}
 
           {tab === 'balances' && (
@@ -648,6 +757,87 @@ export default function GroupDetailScreen() {
         onCancel={() => setDeletingExpenseId(null)}
         onConfirm={confirmDeleteExpense}
       />
+
+      <FilterSheet
+        visible={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title={t('activity.filters')}
+        showClear={activeFilterCount > 0}
+        clearLabel={t('activity.clearFilters')}
+        onClear={clearFilters}
+        doneLabel={t('common.done')}>
+        <FilterSection label={t('activity.filterType')}>
+          <FilterSegment
+            value={filterType}
+            onChange={setFilterType}
+            options={[
+              { value: 'all', label: t('activity.typeAll') },
+              { value: 'expense', label: t('activity.typeExpenses') },
+              { value: 'settlement', label: t('activity.typePayments') },
+            ]}
+          />
+        </FilterSection>
+
+        <FilterSection label={t('activity.filterPeriod')}>
+          <FilterChipRow
+            options={(['all', '7d', '30d', '90d'] as PeriodFilter[]).map((v) => ({
+              key: v,
+              label:
+                v === 'all'
+                  ? t('activity.periodAll')
+                  : v === '7d'
+                    ? t('activity.period7d')
+                    : v === '30d'
+                      ? t('activity.period30d')
+                      : t('activity.period90d'),
+              active: filterPeriod === v,
+              onPress: () => setFilterPeriod(v),
+            }))}
+          />
+        </FilterSection>
+
+        {categoryOptions.length > 0 && (
+          <FilterSection label={t('activity.filterCategory')}>
+            <FilterChipRow
+              options={[
+                {
+                  key: 'all',
+                  label: t('activity.allCategories'),
+                  active: filterCategory == null,
+                  onPress: () => setFilterCategory(null),
+                },
+                ...categoryOptions.map(
+                  (c): FilterChipOption => ({
+                    key: c.slug,
+                    label: t(`categories.${c.slug}`),
+                    emoji: c.emoji,
+                    active: filterCategory === c.slug,
+                    onPress: () => setFilterCategory(c.slug),
+                  }),
+                ),
+              ]}
+            />
+          </FilterSection>
+        )}
+
+        {userOptions.length > 1 && (
+          <FilterSection label={t('activity.filterPerson')}>
+            <FilterChipRow
+              options={[
+                { key: 'all', label: t('activity.allPeople'), active: filterUserId == null, onPress: () => setFilterUserId(null) },
+                ...userOptions.map(
+                  (u): FilterChipOption => ({
+                    key: String(u.id),
+                    label: u.name,
+                    active: filterUserId === u.id,
+                    onPress: () => setFilterUserId(u.id),
+                  }),
+                ),
+              ]}
+            />
+          </FilterSection>
+        )}
+      </FilterSheet>
     </View>
   );
 }
@@ -700,6 +890,7 @@ const makeStyles = (Palette: ThemeColors) =>
   tabActive: { backgroundColor: Palette.ink, borderColor: Palette.ink },
   tabText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.muted3 },
   tabTextActive: { color: Palette.bg },
+  filtersRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingTop: 14 },
   list: { paddingHorizontal: 20, paddingTop: 16, gap: 9 },
   statsPanel: { paddingHorizontal: 24, paddingTop: 20 },
   expenseCard: {

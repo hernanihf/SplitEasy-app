@@ -1,12 +1,21 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  FilterBadgeButton,
+  FilterChipRow,
+  FilterSection,
+  FilterSegment,
+  FilterSheet,
+  type FilterChipOption,
+} from '@/components/filter-sheet';
 import { ScreenMeta } from '@/components/screen-meta';
 import { CATEGORIES, categoryEmoji } from '@/constants/categories';
-import { Font, Radius, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
+import { periodCutoff, type PeriodFilter } from '@/lib/date-filter';
 import { formatAmount, i18n, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
 import type { Expense, Settlement } from '@/app/groups/[id]/index';
@@ -28,16 +37,6 @@ type ActivityEvent = {
 };
 
 type TypeFilter = 'all' | 'expense' | 'settlement';
-type PeriodFilter = 'all' | '7d' | '30d' | '90d';
-
-const PERIOD_DAYS: Record<Exclude<PeriodFilter, 'all'>, number> = { '7d': 7, '30d': 30, '90d': 90 };
-
-function periodCutoff(period: PeriodFilter): Date | null {
-  if (period === 'all') return null;
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - PERIOD_DAYS[period]);
-  return cutoff;
-}
 
 function shortDate(iso: string): string {
   const d = new Date(iso);
@@ -184,18 +183,11 @@ export default function ActivityScreen() {
               <Text style={styles.title}>{t('activity.title')}</Text>
               <Text style={styles.subtitle}>{t('activity.subtitle')}</Text>
             </View>
-            <Pressable
+            <FilterBadgeButton
+              label={t('activity.filters')}
+              count={activeFilterCount}
               onPress={() => setFiltersOpen(true)}
-              style={[styles.filtersBtn, activeFilterCount > 0 && styles.filtersBtnActive]}>
-              <Text style={[styles.filtersBtnText, activeFilterCount > 0 && styles.filtersBtnTextActive]}>
-                {t('activity.filters')}
-              </Text>
-              {activeFilterCount > 0 && (
-                <View style={styles.filtersBadge}>
-                  <Text style={styles.filtersBadgeText}>{activeFilterCount}</Text>
-                </View>
-              )}
-            </Pressable>
+            />
           </View>
 
           {isLoading && events.length === 0 && (
@@ -266,159 +258,105 @@ export default function ActivityScreen() {
         )}
       </SafeAreaView>
 
-      <Modal
+      <FilterSheet
         visible={filtersOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setFiltersOpen(false)}>
-        <Pressable style={styles.dim} onPress={() => setFiltersOpen(false)} />
-        <View style={styles.sheet}>
-          <ScrollView contentContainerStyle={styles.sheetScroll} showsVerticalScrollIndicator={false}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{t('activity.filters')}</Text>
-              {activeFilterCount > 0 && (
-                <Pressable onPress={clearFilters}>
-                  <Text style={styles.clearText}>{t('activity.clearFilters')}</Text>
-                </Pressable>
-              )}
-            </View>
+        onClose={() => setFiltersOpen(false)}
+        title={t('activity.filters')}
+        showClear={activeFilterCount > 0}
+        clearLabel={t('activity.clearFilters')}
+        onClear={clearFilters}
+        doneLabel={t('common.done')}>
+        <FilterSection label={t('activity.filterType')}>
+          <FilterSegment
+            value={filterType}
+            onChange={setFilterType}
+            options={[
+              { value: 'all', label: t('activity.typeAll') },
+              { value: 'expense', label: t('activity.typeExpenses') },
+              { value: 'settlement', label: t('activity.typePayments') },
+            ]}
+          />
+        </FilterSection>
 
-            <Text style={styles.sectionLabel}>{t('activity.filterType')}</Text>
-            <View style={styles.segment}>
-              {(['all', 'expense', 'settlement'] as TypeFilter[]).map((v) => {
-                const active = filterType === v;
-                const label =
-                  v === 'all' ? t('activity.typeAll') : v === 'expense' ? t('activity.typeExpenses') : t('activity.typePayments');
-                return (
-                  <Pressable
-                    key={v}
-                    onPress={() => setFilterType(v)}
-                    style={[styles.segmentBtn, active && styles.segmentBtnActive]}>
-                    <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+        <FilterSection label={t('activity.filterPeriod')}>
+          <FilterChipRow
+            options={(['all', '7d', '30d', '90d'] as PeriodFilter[]).map((v) => ({
+              key: v,
+              label:
+                v === 'all'
+                  ? t('activity.periodAll')
+                  : v === '7d'
+                    ? t('activity.period7d')
+                    : v === '30d'
+                      ? t('activity.period30d')
+                      : t('activity.period90d'),
+              active: filterPeriod === v,
+              onPress: () => setFilterPeriod(v),
+            }))}
+          />
+        </FilterSection>
 
-            <Text style={styles.sectionLabel}>{t('activity.filterPeriod')}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-              {(['all', '7d', '30d', '90d'] as PeriodFilter[]).map((v) => {
-                const active = filterPeriod === v;
-                const label =
-                  v === 'all'
-                    ? t('activity.periodAll')
-                    : v === '7d'
-                      ? t('activity.period7d')
-                      : v === '30d'
-                        ? t('activity.period30d')
-                        : t('activity.period90d');
-                return (
-                  <Pressable
-                    key={v}
-                    onPress={() => setFilterPeriod(v)}
-                    style={[styles.chip, active && styles.chipActive]}>
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+        {groupOptions.length > 1 && (
+          <FilterSection label={t('activity.filterGroup')}>
+            <FilterChipRow
+              options={[
+                { key: 'all', label: t('activity.allGroups'), active: filterGroupId == null, onPress: () => setFilterGroupId(null) },
+                ...groupOptions.map(
+                  (g): FilterChipOption => ({
+                    key: String(g.id),
+                    label: g.name,
+                    emoji: g.emoji,
+                    active: filterGroupId === g.id,
+                    onPress: () => setFilterGroupId(g.id),
+                  }),
+                ),
+              ]}
+            />
+          </FilterSection>
+        )}
 
-            {groupOptions.length > 1 && (
-              <>
-                <Text style={styles.sectionLabel}>{t('activity.filterGroup')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                  <Pressable
-                    onPress={() => setFilterGroupId(null)}
-                    style={[styles.chip, filterGroupId == null && styles.chipActive]}>
-                    <Text style={[styles.chipText, filterGroupId == null && styles.chipTextActive]}>
-                      {t('activity.allGroups')}
-                    </Text>
-                  </Pressable>
-                  {groupOptions.map((g) => {
-                    const active = filterGroupId === g.id;
-                    return (
-                      <Pressable
-                        key={g.id}
-                        onPress={() => setFilterGroupId(g.id)}
-                        style={[styles.chip, active && styles.chipActive]}>
-                        <Text style={styles.chipEmoji}>{g.emoji}</Text>
-                        <Text
-                          style={[styles.chipText, active && styles.chipTextActive]}
-                          numberOfLines={1}>
-                          {g.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </>
-            )}
+        {categoryOptions.length > 0 && (
+          <FilterSection label={t('activity.filterCategory')}>
+            <FilterChipRow
+              options={[
+                {
+                  key: 'all',
+                  label: t('activity.allCategories'),
+                  active: filterCategory == null,
+                  onPress: () => setFilterCategory(null),
+                },
+                ...categoryOptions.map(
+                  (c): FilterChipOption => ({
+                    key: c.slug,
+                    label: t(`categories.${c.slug}`),
+                    emoji: c.emoji,
+                    active: filterCategory === c.slug,
+                    onPress: () => setFilterCategory(c.slug),
+                  }),
+                ),
+              ]}
+            />
+          </FilterSection>
+        )}
 
-            {categoryOptions.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>{t('activity.filterCategory')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                  <Pressable
-                    onPress={() => setFilterCategory(null)}
-                    style={[styles.chip, filterCategory == null && styles.chipActive]}>
-                    <Text style={[styles.chipText, filterCategory == null && styles.chipTextActive]}>
-                      {t('activity.allCategories')}
-                    </Text>
-                  </Pressable>
-                  {categoryOptions.map((c) => {
-                    const active = filterCategory === c.slug;
-                    return (
-                      <Pressable
-                        key={c.slug}
-                        onPress={() => setFilterCategory(c.slug)}
-                        style={[styles.chip, active && styles.chipActive]}>
-                        <Text style={styles.chipEmoji}>{c.emoji}</Text>
-                        <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                          {t(`categories.${c.slug}`)}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </>
-            )}
-
-            {userOptions.length > 1 && (
-              <>
-                <Text style={styles.sectionLabel}>{t('activity.filterPerson')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                  <Pressable
-                    onPress={() => setFilterUserId(null)}
-                    style={[styles.chip, filterUserId == null && styles.chipActive]}>
-                    <Text style={[styles.chipText, filterUserId == null && styles.chipTextActive]}>
-                      {t('activity.allPeople')}
-                    </Text>
-                  </Pressable>
-                  {userOptions.map((u) => {
-                    const active = filterUserId === u.id;
-                    return (
-                      <Pressable
-                        key={u.id}
-                        onPress={() => setFilterUserId(u.id)}
-                        style={[styles.chip, active && styles.chipActive]}>
-                        <Text
-                          style={[styles.chipText, active && styles.chipTextActive]}
-                          numberOfLines={1}>
-                          {u.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </>
-            )}
-          </ScrollView>
-
-          <Pressable onPress={() => setFiltersOpen(false)} style={styles.doneBtn}>
-            <Text style={styles.doneBtnText}>{t('common.done')}</Text>
-          </Pressable>
-        </View>
-      </Modal>
+        {userOptions.length > 1 && (
+          <FilterSection label={t('activity.filterPerson')}>
+            <FilterChipRow
+              options={[
+                { key: 'all', label: t('activity.allPeople'), active: filterUserId == null, onPress: () => setFilterUserId(null) },
+                ...userOptions.map(
+                  (u): FilterChipOption => ({
+                    key: String(u.id),
+                    label: u.name,
+                    active: filterUserId === u.id,
+                    onPress: () => setFilterUserId(u.id),
+                  }),
+                ),
+              ]}
+            />
+          </FilterSection>
+        )}
+      </FilterSheet>
     </View>
   );
 }
@@ -437,30 +375,6 @@ const makeStyles = (Palette: ThemeColors) =>
   },
   title: { fontSize: 24, fontFamily: Font.sansBold, letterSpacing: -0.6, color: Palette.ink },
   subtitle: { marginTop: 3, fontSize: 13.5, color: Palette.muted },
-  filtersBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: Palette.cardBorder,
-    backgroundColor: Palette.card,
-  },
-  filtersBtnActive: { backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
-  filtersBtnText: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink },
-  filtersBtnTextActive: { color: Palette.greenDark },
-  filtersBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 4,
-    backgroundColor: Palette.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filtersBadgeText: { color: '#fff', fontSize: 11, fontFamily: Font.sansBold },
   empty: { paddingHorizontal: 24, paddingTop: 24, color: Palette.muted, fontSize: 14 },
   loading: { paddingTop: 32, alignItems: 'center' },
   list: { paddingHorizontal: 20, paddingTop: 18 },
@@ -493,73 +407,4 @@ const makeStyles = (Palette: ThemeColors) =>
     borderRadius: 12,
   },
   toastText: { color: '#FFFFFF', fontSize: 13.5, fontFamily: Font.sansMedium },
-  dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,16,12,0.42)' },
-  sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    maxHeight: '80%',
-    backgroundColor: Palette.bg,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Palette.cardBorder,
-    paddingTop: 18,
-  },
-  sheetScroll: { paddingHorizontal: 22, paddingBottom: 8 },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  sheetTitle: { fontSize: 17, fontFamily: Font.sansBold, color: Palette.ink },
-  clearText: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.red },
-  sectionLabel: {
-    fontSize: 12.5,
-    fontFamily: Font.sansSemibold,
-    color: Palette.muted,
-    marginBottom: 8,
-    marginTop: 14,
-  },
-  segment: { flexDirection: 'row', gap: 8 },
-  segmentBtn: {
-    flex: 1,
-    height: 38,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Palette.cardBorder,
-    backgroundColor: Palette.card,
-  },
-  segmentBtnActive: { backgroundColor: Palette.ink, borderColor: Palette.ink },
-  segmentText: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.muted3 },
-  segmentTextActive: { color: Palette.bg },
-  chipRow: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: Radius.pill,
-    borderWidth: 1.5,
-    borderColor: Palette.cardBorder,
-    maxWidth: 180,
-  },
-  chipActive: { backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
-  chipEmoji: { fontSize: 14 },
-  chipText: { fontSize: 13, fontFamily: Font.sansMedium, color: Palette.ink },
-  chipTextActive: { color: Palette.greenDark },
-  doneBtn: {
-    margin: 20,
-    height: 50,
-    borderRadius: 15,
-    backgroundColor: Palette.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  doneBtnText: { color: '#fff', fontSize: 15, fontFamily: Font.sansSemibold },
 });
