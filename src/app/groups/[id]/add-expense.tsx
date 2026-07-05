@@ -10,9 +10,13 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ScreenMeta } from '@/components/screen-meta';
 import { DEFAULT_CATEGORY } from '@/constants/categories';
 import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
+import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useColors } from '@/lib/settings';
 import { currencySymbol, formatAmount, fromCents, t, toCents } from '@/lib/i18n';
+import { useIsOnline } from '@/lib/network';
+import { getCachedData } from '@/lib/offline-cache';
+import { queueExpense } from '@/lib/offline-queue';
 import { assetToFile, scanReceiptFile } from '@/lib/receipt-scan';
 import type { Expense, Group } from '@/app/groups/[id]/index';
 
@@ -43,6 +47,7 @@ export default function AddExpenseScreen() {
   const { api } = useAuth();
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
+  const isOnline = useIsOnline();
 
   // Editing an existing expense: prefilled from the snapshot passed in by
   // expense-detail, not re-fetched. There's no way to know which split
@@ -155,13 +160,29 @@ export default function AddExpenseScreen() {
     Promise.all([
       api.get<Group>(`/api/v1/groups/${id}`),
       api.get<{ id: number }>('/api/v1/users/me'),
-    ]).then(([g, me]) => {
-      setGroup(g);
-      // Editing keeps the expense's actual payer; only default it for a new one.
-      if (!isEditMode) {
-        setPaidBy(g.members.some((m) => m.id === me.id) ? me.id : (g.members[0]?.id ?? null));
-      }
-    });
+    ])
+      .then(([g, me]) => {
+        setGroup(g);
+        // Editing keeps the expense's actual payer; only default it for a new one.
+        if (!isEditMode) {
+          setPaidBy(g.members.some((m) => m.id === me.id) ? me.id : (g.members[0]?.id ?? null));
+        }
+      })
+      .catch(async () => {
+        // Offline — reuse whatever group-detail last cached for this group,
+        // so a new expense can still be filled out and queued.
+        const [cachedGroup, cachedMe] = await Promise.all([
+          getCachedData<{ group: Group }>(`group-${id}`),
+          getCachedData<{ id: number }>('me'),
+        ]);
+        if (!cachedGroup) return;
+        const g = cachedGroup.data.group;
+        setGroup(g);
+        if (!isEditMode) {
+          const meId = cachedMe?.data.id;
+          setPaidBy(g.members.some((m) => m.id === meId) ? (meId ?? null) : (g.members[0]?.id ?? null));
+        }
+      });
   }, [id, api, isEditMode]);
 
   const amountNumber = useMemo(() => parseFloat(amount.replace(',', '.')) || 0, [amount]);
@@ -241,7 +262,7 @@ export default function AddExpenseScreen() {
           ...(receiptImagePath ? { receipt_image_path: receiptImagePath } : {}),
         });
       } else {
-        await api.post('/api/v1/expenses', {
+        const payload = {
           group_id: group.id,
           paid_by_id: paidBy,
           description: desc.trim(),
@@ -250,11 +271,26 @@ export default function AddExpenseScreen() {
           split_method: method,
           splits,
           ...(receiptImagePath ? { receipt_image_path: receiptImagePath } : {}),
-        });
+        };
+        // Offline (or the server is simply unreachable) — a new expense is
+        // safe to queue and retry later; edits stay online-only since
+        // there's no conflict-resolution story yet for a group that may
+        // have changed server-side in the meantime.
+        if (!isOnline) {
+          await queueExpense(group.id, payload);
+        } else {
+          try {
+            await api.post('/api/v1/expenses', payload);
+          } catch (e) {
+            if (e instanceof ApiError) throw e;
+            await queueExpense(group.id, payload);
+          }
+        }
       }
       // Go straight back to the group list rather than to expense-detail
       // (which was pushed with a snapshot, not a live fetch, and would show
-      // stale data after an edit).
+      // stale data after an edit) — also true for a queued expense, which
+      // now shows up there tagged "Pending".
       router.replace(`/groups/${id}`);
     } catch {
       setError(t(isEditMode ? 'addExpense.updateError' : 'addExpense.addError'));

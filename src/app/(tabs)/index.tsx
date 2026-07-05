@@ -8,11 +8,13 @@ import { AppLoading } from '@/components/app-loading';
 import { Avatar } from '@/components/avatar';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { InstallPrompt } from '@/components/install-prompt';
+import { OfflineBanner } from '@/components/offline-banner';
 import { ScreenMeta } from '@/components/screen-meta';
 import { Font, Radius, tileBg, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
 import { formatAmount, t } from '@/lib/i18n';
+import { cacheData, getCachedData } from '@/lib/offline-cache';
 import { useColors } from '@/lib/settings';
 import { getItem, removeItem } from '@/lib/storage';
 
@@ -63,8 +65,18 @@ export default function HomeScreen() {
     setIsLoading(true);
     api
       .get<HomeData>('/api/v1/home')
-      .then(setHome)
-      .catch(() => setError(t('home.loadError')))
+      .then((data) => {
+        setHome(data);
+        cacheData('home', data);
+      })
+      .catch(async () => {
+        // Offline (or the backend is unreachable) — fall back to whatever
+        // was last successfully loaded rather than a bare error; OfflineBanner
+        // tells the user they're looking at saved data.
+        const cached = await getCachedData<HomeData>('home');
+        if (cached) setHome(cached.data);
+        else setError(t('home.loadError'));
+      })
       .finally(() => setIsLoading(false));
     api
       .get<{ id: number; name: string; avatar_url: string }>('/api/v1/users/me')
@@ -72,8 +84,15 @@ export default function HomeScreen() {
         setMyId(u.id);
         setName(u.name?.split(' ')[0] || t('profile.anonymous'));
         setAvatar(u.avatar_url || null);
+        cacheData('me', u);
       })
-      .catch(() => {});
+      .catch(async () => {
+        const cached = await getCachedData<{ id: number; name: string; avatar_url: string }>('me');
+        if (!cached) return;
+        setMyId(cached.data.id);
+        setName(cached.data.name?.split(' ')[0] || t('profile.anonymous'));
+        setAvatar(cached.data.avatar_url || null);
+      });
   }, [api]);
 
   const handleDeleteGroup = async () => {
@@ -118,6 +137,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.root}>
       <ScreenMeta title={t('nav.groups')} />
+      <OfflineBanner />
       <SafeAreaView edges={['top']} style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* header */}

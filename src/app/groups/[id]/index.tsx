@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,12 +9,15 @@ import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CategoryChart } from '@/components/category-chart';
+import { OfflineBanner } from '@/components/offline-banner';
 import { ScreenMeta } from '@/components/screen-meta';
 import { categoryEmoji } from '@/constants/categories';
 import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, t } from '@/lib/i18n';
 import { rememberLastGroup } from '@/lib/last-group';
+import { cacheData, getCachedData } from '@/lib/offline-cache';
+import { getPendingExpenses, syncPendingExpenses, type PendingExpense } from '@/lib/offline-queue';
 import { useColors } from '@/lib/settings';
 
 export type Group = {
@@ -63,7 +66,10 @@ type Debt = { from_user_id: number; to_user_id: number; amount: number };
 
 type HistoryItem =
   | { kind: 'expense'; date: string; expense: Expense }
-  | { kind: 'payment'; date: string; settlement: Settlement };
+  | { kind: 'payment'; date: string; settlement: Settlement }
+  | { kind: 'pending'; date: string; pending: PendingExpense };
+
+type GroupSnapshot = { group: Group; expenses: Expense[]; settlements: Settlement[]; debts: Debt[] };
 
 export default function GroupDetailScreen() {
   const { id, tab: tabParam } = useLocalSearchParams<{ id: string; tab?: string }>();
@@ -90,6 +96,10 @@ export default function GroupDetailScreen() {
   const [deletingSettlement, setDeletingSettlement] = useState(false);
   const [deletingExpenseId, setDeletingExpenseId] = useState<number | null>(null);
   const [deletingExpense, setDeletingExpense] = useState(false);
+  const [pending, setPending] = useState<PendingExpense[]>([]);
+  // Lets the sync-then-reload step below call the latest `load` without
+  // referencing the `load` const from inside its own definition.
+  const loadRef = useRef<() => void>(() => {});
 
   const load = useCallback(() => {
     if (!id) return;
@@ -109,10 +119,36 @@ export default function GroupDetailScreen() {
         setDebts(d ?? []);
         setMyId(me.id);
         rememberLastGroup(g.id);
+        cacheData(`group-${id}`, { group: g, expenses: ex ?? [], settlements: st ?? [], debts: d ?? [] });
+        cacheData('me', me);
+        // We're online (the fetches above just succeeded) — flush anything
+        // queued for this group and reload once more if something synced,
+        // so it moves from "Pending" to a real, server-confirmed row.
+        syncPendingExpenses(api).then((synced) => {
+          if (synced > 0) loadRef.current();
+          else getPendingExpenses(Number(id)).then(setPending);
+        });
       })
-      .catch(() => setError(t('groupDetail.loadError')))
+      .catch(async () => {
+        const cached = await getCachedData<GroupSnapshot>(`group-${id}`);
+        if (cached) {
+          setGroup(cached.data.group);
+          setExpenses(cached.data.expenses);
+          setSettlements(cached.data.settlements);
+          setDebts(cached.data.debts);
+          const me = await getCachedData<{ id: number }>('me');
+          if (me) setMyId(me.data.id);
+        } else {
+          setError(t('groupDetail.loadError'));
+        }
+        getPendingExpenses(Number(id)).then(setPending);
+      })
       .finally(() => setLoading(false));
   }, [id, api]);
+
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
 
   useFocusEffect(load);
 
@@ -154,14 +190,16 @@ export default function GroupDetailScreen() {
     [group],
   );
 
-  // Unified history: expenses and payments interleaved, newest first.
+  // Unified history: expenses, payments, and not-yet-synced expenses
+  // (queued while offline) interleaved, newest first.
   const history = useMemo<HistoryItem[]>(() => {
     const items: HistoryItem[] = [
       ...expenses.map((e) => ({ kind: 'expense' as const, date: e.created_at, expense: e })),
       ...settlements.map((s) => ({ kind: 'payment' as const, date: s.created_at, settlement: s })),
+      ...pending.map((p) => ({ kind: 'pending' as const, date: p.createdAt, pending: p })),
     ];
     return items.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  }, [expenses, settlements]);
+  }, [expenses, settlements, pending]);
 
   // Total group spend per category (settlements aren't spending, so they're
   // excluded), largest first — powers the spending chart.
@@ -270,6 +308,7 @@ export default function GroupDetailScreen() {
   return (
     <View style={styles.root}>
       <ScreenMeta title={group.name} />
+      <OfflineBanner pendingCount={pending.length} />
       <SafeAreaView edges={['top']} style={styles.safe}>
         {/* top bar */}
         <View style={styles.topbar}>
@@ -350,6 +389,26 @@ export default function GroupDetailScreen() {
             <View style={styles.list}>
               {history.length === 0 && <Text style={styles.muted}>{t('groupDetail.historyEmpty')}</Text>}
               {history.map((item) => {
+                if (item.kind === 'pending') {
+                  const p = item.pending;
+                  const emoji = categoryEmoji(p.payload.category, p.payload.description);
+                  return (
+                    <View key={`p${p.localId}`} style={styles.expenseCard}>
+                      <View style={[styles.smallAvatar, { backgroundColor: tileBg(p.payload.description) }]}>
+                        <Text style={styles.expenseEmoji}>{emoji}</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.expenseDesc} numberOfLines={1}>
+                          {p.payload.description}
+                        </Text>
+                        <Text style={styles.pendingTag}>{t('groupDetail.pendingTag')}</Text>
+                      </View>
+                      <Text style={styles.expenseAmount}>
+                        {formatAmount(p.payload.amount, group.currency)}
+                      </Text>
+                    </View>
+                  );
+                }
                 if (item.kind === 'payment') {
                   const s = item.settlement;
                   const canDelete = myId != null && (s.from_user_id === myId || s.to_user_id === myId);
@@ -668,6 +727,7 @@ const makeStyles = (Palette: ThemeColors) =>
   expenseMeta: { marginTop: 3, fontSize: 12, color: Palette.muted },
   expenseAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink },
   expenseShare: { marginTop: 3, fontSize: 11, color: Palette.muted },
+  pendingTag: { marginTop: 3, fontSize: 11, color: Palette.muted, fontStyle: 'italic' },
   balanceCard: {
     backgroundColor: Palette.card,
     borderWidth: 1,

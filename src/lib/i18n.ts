@@ -7,6 +7,17 @@ const translations = {
   en: {
     common: { cancel: 'Cancel', delete: 'Delete', edit: 'Edit' },
     nav: { groups: 'Groups', activity: 'Activity', profile: 'Profile' },
+    offline: {
+      bannerCached: "You're offline — showing saved data",
+      bannerPending: {
+        one: "You're offline · %{count} expense to sync",
+        other: "You're offline · %{count} expenses to sync",
+      },
+      syncing: {
+        one: 'Syncing %{count} expense…',
+        other: 'Syncing %{count} expenses…',
+      },
+    },
     install: {
       title: 'Install SplitEasy',
       subtitle: 'Quick access from your home screen',
@@ -100,6 +111,7 @@ const translations = {
       deleteSettlementMessage: "This can't be undone from the app.",
       deleteSettlementError: 'Could not delete the payment. Please try again.',
       title: 'Group',
+      pendingTag: 'Pending',
     },
     join: {
       title: 'Join group',
@@ -259,6 +271,17 @@ const translations = {
   es: {
     common: { cancel: 'Cancelar', delete: 'Borrar', edit: 'Editar' },
     nav: { groups: 'Grupos', activity: 'Actividad', profile: 'Perfil' },
+    offline: {
+      bannerCached: 'Sin conexión — mostrando datos guardados',
+      bannerPending: {
+        one: 'Sin conexión · %{count} gasto por sincronizar',
+        other: 'Sin conexión · %{count} gastos por sincronizar',
+      },
+      syncing: {
+        one: 'Sincronizando %{count} gasto…',
+        other: 'Sincronizando %{count} gastos…',
+      },
+    },
     install: {
       title: 'Instalar SplitEasy',
       subtitle: 'Acceso rápido desde tu pantalla de inicio',
@@ -352,6 +375,7 @@ const translations = {
       deleteSettlementMessage: 'Esto no se puede deshacer desde la app.',
       deleteSettlementError: 'No se pudo borrar el pago. Intentá de nuevo.',
       title: 'Grupo',
+      pendingTag: 'Pendiente',
     },
     join: {
       title: 'Unirse a un grupo',
