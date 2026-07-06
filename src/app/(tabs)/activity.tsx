@@ -34,6 +34,10 @@ type ActivityEvent = {
   amount: number;
   your_share: number;
   date: string;
+  // Expenses only — a settlement can't be soft-deleted. Still included in
+  // the feed (struck through, non-openable) instead of vanishing.
+  deleted?: boolean;
+  deleted_by_name?: string;
 };
 
 type TypeFilter = 'all' | 'expense' | 'settlement';
@@ -87,7 +91,7 @@ export default function ActivityScreen() {
 
   const openEvent = useCallback(
     async (ev: ActivityEvent, key: string) => {
-      if (openingKey) return;
+      if (openingKey || ev.deleted) return;
       setOpeningKey(key);
       try {
         if (ev.type === 'settlement') {
@@ -131,13 +135,13 @@ export default function ActivityScreen() {
   }, [events]);
 
   const categoryOptions = useMemo(() => {
-    const present = new Set(events.map((e) => e.category).filter(Boolean));
+    const present = new Set(events.filter((e) => !e.deleted).map((e) => e.category).filter(Boolean));
     return CATEGORIES.filter((c) => present.has(c.slug));
   }, [events]);
 
   const userOptions = useMemo(() => {
     const map = new Map<number, string>();
-    events.forEach((e) => {
+    events.filter((e) => !e.deleted).forEach((e) => {
       if (!map.has(e.actor_id)) map.set(e.actor_id, e.actor_name);
     });
     return [...map.entries()]
@@ -214,19 +218,23 @@ export default function ActivityScreen() {
               return (
                 <Pressable
                   key={key}
-                  onPress={() => openEvent(ev, key)}
+                  onPress={ev.deleted ? undefined : () => openEvent(ev, key)}
                   style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
-                  <View style={[styles.tile, { backgroundColor: tileBg(tileKey) }]}>
+                  <View style={[styles.tile, { backgroundColor: tileBg(tileKey) }, ev.deleted && styles.deletedTile]}>
                     <Text style={styles.tileEmoji}>{emoji}</Text>
                   </View>
                   <View style={styles.info}>
-                    <Text style={styles.rowTitle} numberOfLines={1}>
+                    <Text style={[styles.rowTitle, ev.deleted && styles.deletedText]} numberOfLines={1}>
                       {ev.title}
                     </Text>
                     <Text style={styles.rowSub} numberOfLines={1}>
-                      {settlement
-                        ? t('activity.settledIn', { group: ev.group_name })
-                        : t('activity.paidBy', { name: ev.actor_name, group: ev.group_name })}
+                      {ev.deleted
+                        ? ev.deleted_by_name
+                          ? t('activity.deletedBy', { name: ev.deleted_by_name, group: ev.group_name })
+                          : t('activity.deletedIn', { group: ev.group_name })
+                        : settlement
+                          ? t('activity.settledIn', { group: ev.group_name })
+                          : t('activity.paidBy', { name: ev.actor_name, group: ev.group_name })}
                     </Text>
                   </View>
                   <View style={styles.amountCol}>
@@ -238,6 +246,7 @@ export default function ActivityScreen() {
                           style={[
                             styles.amount,
                             { color: settlement ? Palette.green : Palette.ink },
+                            ev.deleted && styles.deletedText,
                           ]}>
                           {formatAmount(ev.amount, ev.currency)}
                         </Text>
@@ -396,6 +405,8 @@ const makeStyles = (Palette: ThemeColors) =>
   amountCol: { alignItems: 'flex-end', minWidth: 30 },
   amount: { fontSize: 13.5, fontFamily: Font.monoSemibold },
   date: { marginTop: 2, fontSize: 11, color: Palette.faint },
+  deletedTile: { opacity: 0.5 },
+  deletedText: { color: Palette.muted, textDecorationLine: 'line-through' },
   toast: {
     position: 'absolute',
     top: 52,
