@@ -128,6 +128,11 @@ const translations = {
       deleteSettlementError: 'Could not delete the payment. Please try again.',
       title: 'Group',
       pendingTag: 'Pending',
+      editIconTitle: 'Choose an icon',
+      editNameTitle: 'Rename group',
+      editNamePlaceholder: 'Group name',
+      editNameRequired: 'Group name is required.',
+      editError: 'Could not save the change. Please try again.',
     },
     join: {
       title: 'Join group',
@@ -408,6 +413,11 @@ const translations = {
       deleteSettlementError: 'No se pudo borrar el pago. Intentá de nuevo.',
       title: 'Grupo',
       pendingTag: 'Pendiente',
+      editIconTitle: 'Elegí un ícono',
+      editNameTitle: 'Renombrar grupo',
+      editNamePlaceholder: 'Nombre del grupo',
+      editNameRequired: 'El nombre del grupo es obligatorio.',
+      editError: 'No se pudo guardar el cambio. Intentá de nuevo.',
     },
     join: {
       title: 'Unirse a un grupo',

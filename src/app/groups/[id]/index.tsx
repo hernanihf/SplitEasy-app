@@ -9,6 +9,8 @@ import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CategoryChart } from '@/components/category-chart';
+import { EditGroupIconModal } from '@/components/edit-group-icon-modal';
+import { EditGroupNameModal } from '@/components/edit-group-name-modal';
 import {
   FilterBadgeButton,
   FilterChipRow,
@@ -133,6 +135,9 @@ export default function GroupDetailScreen() {
   const [deletingExpenseId, setDeletingExpenseId] = useState<number | null>(null);
   const [deletingExpense, setDeletingExpense] = useState(false);
   const [pending, setPending] = useState<PendingExpense[]>([]);
+  const [editingIcon, setEditingIcon] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [savingGroup, setSavingGroup] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'settlement'>('all');
   const [filterPeriod, setFilterPeriod] = useState<PeriodFilter>('all');
@@ -365,6 +370,41 @@ export default function GroupDetailScreen() {
     }
   }, [api, deletingExpenseId, deletingExpense, load]);
 
+  const saveIcon = useCallback(
+    async (emoji: string) => {
+      if (savingGroup) return;
+      setEditingIcon(false);
+      if (emoji === group?.emoji) return;
+      setSavingGroup(true);
+      try {
+        const updated = await api.patch<Group>(`/api/v1/groups/${id}`, { emoji });
+        setGroup(updated);
+      } catch {
+        setErrorMsg(t('groupDetail.editError'));
+      } finally {
+        setSavingGroup(false);
+      }
+    },
+    [api, id, group, savingGroup],
+  );
+
+  const saveName = useCallback(
+    async (name: string) => {
+      if (!name.trim() || savingGroup) return;
+      setSavingGroup(true);
+      try {
+        const updated = await api.patch<Group>(`/api/v1/groups/${id}`, { name: name.trim() });
+        setGroup(updated);
+        setEditingName(false);
+      } catch {
+        setErrorMsg(t('groupDetail.editError'));
+      } finally {
+        setSavingGroup(false);
+      }
+    },
+    [api, id, savingGroup],
+  );
+
   if (loading && !group) {
     return (
       <View style={styles.root}>
@@ -426,11 +466,15 @@ export default function GroupDetailScreen() {
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* group header */}
           <View style={styles.groupHead}>
-            <View style={[styles.tile, { backgroundColor: tileBg(group.id) }]}>
+            <Pressable
+              onPress={() => setEditingIcon(true)}
+              style={[styles.tile, { backgroundColor: tileBg(group.id) }]}>
               <Text style={styles.tileEmoji}>{group.emoji || '💸'}</Text>
-            </View>
+            </Pressable>
             <View style={{ flex: 1 }}>
-              <Text style={styles.groupName}>{group.name}</Text>
+              <Pressable onPress={() => setEditingName(true)} style={styles.groupNameWrap}>
+                <Text style={styles.groupName}>{group.name}</Text>
+              </Pressable>
               <Text style={styles.groupMeta}>
                 {t('groupDetail.memberCount', { count: group.members.length })}
               </Text>
@@ -754,6 +798,19 @@ export default function GroupDetailScreen() {
         onCancel={() => setDeletingExpenseId(null)}
         onConfirm={confirmDeleteExpense}
       />
+      <EditGroupIconModal
+        visible={editingIcon}
+        currentEmoji={group.emoji}
+        onSelect={saveIcon}
+        onCancel={() => setEditingIcon(false)}
+      />
+      <EditGroupNameModal
+        visible={editingName}
+        initialName={group.name}
+        saving={savingGroup}
+        onSave={saveName}
+        onCancel={() => setEditingName(false)}
+      />
 
       <FilterSheet
         visible={filtersOpen}
@@ -865,6 +922,7 @@ const makeStyles = (Palette: ThemeColors) =>
   groupHead: { paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', gap: 13 },
   tile: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   tileEmoji: { fontSize: 24 },
+  groupNameWrap: { alignSelf: 'flex-start' },
   groupName: { fontSize: 22, fontFamily: Font.sansBold, letterSpacing: -0.5, color: Palette.ink },
   groupMeta: { marginTop: 3, fontSize: 12.5, color: Palette.muted },
   summary: { marginHorizontal: 24, marginTop: 18, borderRadius: Radius.lg, borderWidth: 1, padding: 16 },
