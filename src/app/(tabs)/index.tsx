@@ -129,7 +129,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.root}>
         <ScreenMeta title={t('nav.groups')} />
-        <AppLoading message={t('home.loadingMessage')} />
+        <AppLoading />
       </View>
     );
   }

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { FilterIcon } from '@/components/filter-icon';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { useColors } from '@/lib/settings';
 
@@ -13,12 +14,15 @@ import { useColors } from '@/lib/settings';
 
 type BadgeButtonProps = { label: string; count: number; onPress: () => void };
 
+// Icon-only, matching the edit/delete buttons elsewhere (a plain glyph in a
+// small tappable square) rather than a labeled pill — label becomes the
+// accessible name instead of visible text.
 export function FilterBadgeButton({ label, count, onPress }: BadgeButtonProps) {
   const Palette = useColors();
   const styles = makeStyles(Palette);
   return (
-    <Pressable onPress={onPress} style={[styles.filtersBtn, count > 0 && styles.filtersBtnActive]}>
-      <Text style={[styles.filtersBtnText, count > 0 && styles.filtersBtnTextActive]}>{label}</Text>
+    <Pressable onPress={onPress} style={styles.filtersBtn} accessibilityLabel={label}>
+      <FilterIcon color={Palette.ink} size={18} />
       {count > 0 && (
         <View style={styles.filtersBadge}>
           <Text style={styles.filtersBadgeText}>{count}</Text>
@@ -129,29 +133,24 @@ export function FilterChipRow({ options }: { options: FilterChipOption[] }) {
 const makeStyles = (Palette: ThemeColors) =>
   StyleSheet.create({
     filtersBtn: {
-      flexDirection: 'row',
+      width: 38,
+      height: 38,
       alignItems: 'center',
-      gap: 6,
-      paddingVertical: 9,
-      paddingHorizontal: 14,
-      borderRadius: Radius.pill,
-      borderWidth: 1,
-      borderColor: Palette.cardBorder,
-      backgroundColor: Palette.card,
+      justifyContent: 'center',
     },
-    filtersBtnActive: { backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
-    filtersBtnText: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink },
-    filtersBtnTextActive: { color: Palette.greenDark },
     filtersBadge: {
-      minWidth: 18,
-      height: 18,
-      borderRadius: 9,
-      paddingHorizontal: 4,
+      position: 'absolute',
+      top: 2,
+      right: 2,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      paddingHorizontal: 3,
       backgroundColor: Palette.green,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    filtersBadgeText: { color: '#fff', fontSize: 11, fontFamily: Font.sansBold },
+    filtersBadgeText: { color: '#fff', fontSize: 10, fontFamily: Font.sansBold },
     dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,16,12,0.42)' },
     sheet: {
       position: 'absolute',

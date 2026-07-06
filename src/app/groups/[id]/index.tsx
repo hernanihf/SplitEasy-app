@@ -420,9 +420,6 @@ export default function GroupDetailScreen() {
                 <Text style={styles.shareGlyph}>🔗</Text>
               )}
             </Pressable>
-            <Pressable onPress={() => setTab('balances')} style={styles.settlePill}>
-              <Text style={styles.settlePillText}>{t('groupDetail.settleUp')}</Text>
-            </Pressable>
           </View>
         </View>
 
@@ -864,8 +861,6 @@ const makeStyles = (Palette: ThemeColors) =>
   },
   shareGlyph: { fontSize: 16 },
   copiedTick: { color: Palette.green, fontSize: 18, fontFamily: Font.sansBold, lineHeight: 20 },
-  settlePill: { backgroundColor: Palette.greenTint, borderRadius: 11, paddingVertical: 9, paddingHorizontal: 14 },
-  settlePillText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.green },
   scroll: { paddingTop: 14, paddingBottom: 110 },
   groupHead: { paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', gap: 13 },
   tile: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },

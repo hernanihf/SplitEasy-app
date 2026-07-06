@@ -53,7 +53,6 @@ const translations = {
         "This can't be undone — it deletes every expense, payment, comment, and receipt image in the group, for everyone.",
       deleteGroupError: 'Could not delete the group. Please try again.',
       deleteGroupNotAllowed: 'Only the group creator can delete it.',
-      loadingMessage: 'Loading your expenses & groups',
     },
     activity: {
       title: 'Activity',
@@ -99,7 +98,6 @@ const translations = {
       userN: 'User #%{id}',
       loadError: 'Could not load the group.',
       notFound: 'Group not found.',
-      settleUp: 'Settle up',
       yourBalance: 'Your balance in this group',
       history: 'History',
       balances: 'Balances',
@@ -335,7 +333,6 @@ const translations = {
         'Esto no se puede deshacer — borra todos los gastos, pagos, comentarios e imágenes de tickets del grupo, para todos.',
       deleteGroupError: 'No se pudo borrar el grupo. Intentá de nuevo.',
       deleteGroupNotAllowed: 'Solo quien creó el grupo puede borrarlo.',
-      loadingMessage: 'Cargando tus gastos y grupos',
     },
     activity: {
       title: 'Actividad',
@@ -381,7 +378,6 @@ const translations = {
       userN: 'Usuario #%{id}',
       loadError: 'No se pudo cargar el grupo.',
       notFound: 'Grupo no encontrado.',
-      settleUp: 'Saldar',
       yourBalance: 'Tu balance en este grupo',
       history: 'Historial',
       balances: 'Balances',
