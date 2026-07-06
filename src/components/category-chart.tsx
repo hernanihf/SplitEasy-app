@@ -4,7 +4,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { categoryColor } from '@/constants/categories';
 import { Font, type ThemeColors } from '@/constants/design';
-import { formatAmount, formatAmountPlain, t } from '@/lib/i18n';
+import { formatAmount, formatAmountPlain, formatPercent, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
 
 export type CategorySlice = { slug: string; amount: number };
@@ -80,14 +80,14 @@ export function CategoryChart({ slices, total, currency }: Props) {
 
       <View style={styles.legend}>
         {arcs.map((a) => {
-          const pct = Math.round((a.amount / total) * 100);
+          const pct = formatPercent(a.amount / total);
           return (
             <View key={a.slug} style={styles.legendRow}>
               <View style={[styles.dot, { backgroundColor: categoryColor(a.slug) }]} />
               <Text style={styles.legendName} numberOfLines={1}>
                 {t(`categories.${a.slug}`)}
               </Text>
-              <Text style={styles.legendPct}>{pct}%</Text>
+              <Text style={styles.legendPct}>{pct}</Text>
               <Text style={styles.legendAmount}>{formatAmount(a.amount, currency)}</Text>
             </View>
           );
@@ -122,6 +122,6 @@ const makeStyles = (Palette: ThemeColors) =>
     legendRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
     dot: { width: 12, height: 12, borderRadius: 6 },
     legendName: { flex: 1, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
-    legendPct: { fontSize: 12.5, color: Palette.muted, fontFamily: Font.sansMedium, minWidth: 34, textAlign: 'right' },
+    legendPct: { fontSize: 12.5, color: Palette.muted, fontFamily: Font.sansMedium, minWidth: 56, textAlign: 'right' },
     legendAmount: { fontSize: 13.5, fontFamily: Font.monoSemibold, color: Palette.ink, minWidth: 74, textAlign: 'right' },
   });

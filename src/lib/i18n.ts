@@ -627,6 +627,19 @@ export function formatAmountPlain(cents: number): string {
 }
 
 /**
+ * Locale-aware percentage with 2 decimal places — e.g. 0.1234 renders as
+ * "12.34%" (en) or "12,34%" (es).
+ */
+export function formatPercent(fraction: number): string {
+  const numberLocale = i18n.locale === 'es' ? 'es-AR' : 'en-US';
+  return new Intl.NumberFormat(numberLocale, {
+    style: 'percent',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(fraction);
+}
+
+/**
  * Just the symbol Intl would render for this currency (e.g. "$", "€",
  * "ARS") — for decorating an amount TextInput while the user types, where a
  * fully formatted number doesn't make sense.
