@@ -133,6 +133,8 @@ const translations = {
       editNamePlaceholder: 'Group name',
       editNameRequired: 'Group name is required.',
       editError: 'Could not save the change. Please try again.',
+      deletedBy: 'Deleted by %{name}',
+      deletedTag: 'Deleted',
     },
     join: {
       title: 'Join group',
@@ -418,6 +420,8 @@ const translations = {
       editNamePlaceholder: 'Nombre del grupo',
       editNameRequired: 'El nombre del grupo es obligatorio.',
       editError: 'No se pudo guardar el cambio. Intentá de nuevo.',
+      deletedBy: 'Eliminado por %{name}',
+      deletedTag: 'Eliminado',
     },
     join: {
       title: 'Unirse a un grupo',
