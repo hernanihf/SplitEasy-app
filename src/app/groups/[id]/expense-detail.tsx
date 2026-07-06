@@ -176,7 +176,7 @@ export default function ExpenseDetailScreen() {
             <Text style={styles.heroDesc}>{expense.description}</Text>
             <Text style={styles.heroAmount}>{formatAmount(expense.amount, currency)}</Text>
             <Text style={styles.heroMeta}>
-              {t('groupDetail.paidBy', { name: expense.paid_by.name })} · {formatDate(expense.created_at)}
+              {t('groupDetail.paidBy', { name: expense.paid_by.name, date: formatDate(expense.created_at) })}
             </Text>
           </View>
 
