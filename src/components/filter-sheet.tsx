@@ -49,21 +49,23 @@ export function FilterSheet({ visible, onClose, title, showClear, clearLabel, on
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} />
-      <View style={styles.sheet}>
-        <ScrollView contentContainerStyle={styles.sheetScroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>{title}</Text>
-            {showClear && (
-              <Pressable onPress={onClear}>
-                <Text style={styles.clearText}>{clearLabel}</Text>
-              </Pressable>
-            )}
-          </View>
-          {children}
-        </ScrollView>
-        <Pressable onPress={onClose} style={styles.doneBtn}>
-          <Text style={styles.doneBtnText}>{doneLabel}</Text>
-        </Pressable>
+      <View style={styles.sheetWrap} pointerEvents="box-none">
+        <View style={styles.sheet}>
+          <ScrollView contentContainerStyle={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>{title}</Text>
+              {showClear && (
+                <Pressable onPress={onClear}>
+                  <Text style={styles.clearText}>{clearLabel}</Text>
+                </Pressable>
+              )}
+            </View>
+            {children}
+          </ScrollView>
+          <Pressable onPress={onClose} style={styles.doneBtn}>
+            <Text style={styles.doneBtnText}>{doneLabel}</Text>
+          </Pressable>
+        </View>
       </View>
     </Modal>
   );
@@ -152,11 +154,21 @@ const makeStyles = (Palette: ThemeColors) =>
     },
     filtersBadgeText: { color: '#fff', fontSize: 10, fontFamily: Font.sansBold },
     dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,16,12,0.42)' },
-    sheet: {
+    // On web, Modal portals to the document body — outside the app shell's
+    // centred, width-capped column — so without this the sheet would stretch
+    // to the full browser width instead of just the phone-sized layout.
+    sheetWrap: {
       position: 'absolute',
+      top: 0,
       left: 0,
       right: 0,
       bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+    },
+    sheet: {
+      width: '100%',
+      maxWidth: 480,
       maxHeight: '80%',
       backgroundColor: Palette.bg,
       borderTopLeftRadius: Radius.xl,
