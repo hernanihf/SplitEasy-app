@@ -140,8 +140,10 @@ const translations = {
     },
     join: {
       title: 'Join group',
-      description: "You've been invited to split expenses together on SplitEasy — tap to join.",
-      joining: 'Joining the group…',
+      description: "You've been invited to split expenses together on SplitEasy.",
+      confirm: 'Join group',
+      joining: 'Joining…',
+      notNow: 'Not now',
       error: 'This invite link is invalid or has expired.',
     },
     addExpense: {
@@ -429,8 +431,10 @@ const translations = {
     },
     join: {
       title: 'Unirse a un grupo',
-      description: 'Te invitaron a dividir gastos juntos en SplitEasy — tocá para unirte.',
-      joining: 'Uniéndote al grupo…',
+      description: 'Te invitaron a dividir gastos juntos en SplitEasy.',
+      confirm: 'Unirme al grupo',
+      joining: 'Uniéndote…',
+      notNow: 'Ahora no',
       error: 'Este link de invitación no es válido o expiró.',
     },
     addExpense: {
