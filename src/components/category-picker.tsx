@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ChevronIcon } from '@/components/chevron-icon';
 import { CATEGORIES } from '@/constants/categories';
@@ -18,11 +18,23 @@ const GAP = 6;
 const MARGIN = 16;
 const MIN_WIDTH = 220;
 
+// RN's Dimensions.get('window') can lag the browser's real viewport size on
+// the very first read on web (it settles after the first resize/layout
+// event) — which was placing the dropdown as if the screen were much
+// shorter than it actually is on that first open. window.innerWidth/Height
+// are always current, so prefer those on web.
+function getViewportSize() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return { width: window.innerWidth, height: window.innerHeight };
+  }
+  return Dimensions.get('window');
+}
+
 // Positions the dropdown against its trigger's measured screen coordinates —
 // opens downward by default, flips above the trigger if there isn't enough
 // room below, and stays clear of the screen edges horizontally.
 function placeDropdown(anchor: Anchor) {
-  const win = Dimensions.get('window');
+  const win = getViewportSize();
   const width = Math.min(Math.max(anchor.width, MIN_WIDTH), win.width - MARGIN * 2);
 
   let left = anchor.x;
