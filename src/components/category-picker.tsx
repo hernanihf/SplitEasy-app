@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ChevronIcon } from '@/components/chevron-icon';
 import { CATEGORIES } from '@/constants/categories';
@@ -12,55 +12,87 @@ type Props = {
   onChange: (slug: string) => void;
 };
 
+type Anchor = { x: number; y: number; width: number; height: number };
+
+const GAP = 6;
+const MARGIN = 16;
+const MIN_WIDTH = 220;
+
+// Positions the dropdown against its trigger's measured screen coordinates —
+// opens downward by default, flips above the trigger if there isn't enough
+// room below, and stays clear of the screen edges horizontally.
+function placeDropdown(anchor: Anchor) {
+  const win = Dimensions.get('window');
+  const width = Math.min(Math.max(anchor.width, MIN_WIDTH), win.width - MARGIN * 2);
+
+  let left = anchor.x;
+  if (left + width > win.width - MARGIN) left = win.width - width - MARGIN;
+  if (left < MARGIN) left = MARGIN;
+
+  const spaceBelow = win.height - (anchor.y + anchor.height) - MARGIN;
+  const spaceAbove = anchor.y - MARGIN;
+  const openUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+  const maxHeight = Math.min(320, Math.max(openUp ? spaceAbove : spaceBelow, 120));
+
+  return openUp
+    ? { left, width, maxHeight, bottom: win.height - anchor.y + GAP }
+    : { left, width, maxHeight, top: anchor.y + anchor.height + GAP };
+}
+
 // Collapsed by default to just the current (suggested or already-picked)
 // category — the full 20-category list only appears once you tap it, as a
-// dropdown panel below the trigger instead of sitting on screen the whole
-// time. Picking one collapses it back.
+// dropdown anchored to the trigger (like a native <select>) rather than a
+// sheet sliding up from the bottom of the screen.
 export function CategoryPicker({ value, onChange }: Props) {
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
-  const [expanded, setExpanded] = useState(false);
+  const [placement, setPlacement] = useState<ReturnType<typeof placeDropdown> | null>(null);
+  const triggerRef = useRef<View>(null);
 
   const current = CATEGORIES.find((c) => c.slug === value) ?? CATEGORIES[CATEGORIES.length - 1];
 
+  const open = () => {
+    triggerRef.current?.measureInWindow((x, y, width, height) => {
+      setPlacement(placeDropdown({ x, y, width, height }));
+    });
+  };
+  const close = () => setPlacement(null);
+
   return (
-    <View>
-      <Pressable
-        onPress={() => setExpanded((e) => !e)}
-        style={[styles.chip, styles.chipActive, styles.chipCollapsed]}>
+    <View ref={triggerRef} collapsable={false}>
+      <Pressable onPress={open} style={[styles.chip, styles.chipActive, styles.chipCollapsed]}>
         <Text style={styles.emoji}>{current.emoji}</Text>
         <Text style={[styles.label, styles.labelActive]}>{t(`categories.${current.slug}`)}</Text>
-        <ChevronIcon color={Palette.greenDark} style={expanded ? styles.chevronUp : undefined} />
+        <ChevronIcon color={Palette.greenDark} />
       </Pressable>
 
-      {expanded && (
-        <View style={styles.dropdown}>
-          <ScrollView style={styles.dropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-            {CATEGORIES.map((c, i) => {
-              const active = value === c.slug;
-              return (
-                <Pressable
-                  key={c.slug}
-                  onPress={() => {
-                    onChange(c.slug);
-                    setExpanded(false);
-                  }}
-                  style={[
-                    styles.row,
-                    active && styles.rowActive,
-                    i < CATEGORIES.length - 1 && styles.rowDivider,
-                  ]}>
-                  <Text style={styles.emoji}>{c.emoji}</Text>
-                  <Text style={[styles.rowLabel, active && styles.labelActive]}>
-                    {t(`categories.${c.slug}`)}
-                  </Text>
-                  {active && <Text style={styles.check}>✓</Text>}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
+      <Modal visible={!!placement} transparent animationType="fade" onRequestClose={close}>
+        <Pressable style={styles.dim} onPress={close} />
+        {placement && (
+          <View style={[styles.dropdown, placement]}>
+            <ScrollView style={{ maxHeight: placement.maxHeight }} showsVerticalScrollIndicator={false}>
+              {CATEGORIES.map((c, i) => {
+                const active = value === c.slug;
+                return (
+                  <Pressable
+                    key={c.slug}
+                    onPress={() => {
+                      onChange(c.slug);
+                      close();
+                    }}
+                    style={[styles.row, i < CATEGORIES.length - 1 && styles.rowDivider]}>
+                    <Text style={styles.emoji}>{c.emoji}</Text>
+                    <Text style={[styles.rowLabel, active && styles.labelActive]}>
+                      {t(`categories.${c.slug}`)}
+                    </Text>
+                    {active && <Text style={styles.check}>✓</Text>}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+      </Modal>
     </View>
   );
 }
@@ -82,24 +114,22 @@ const makeStyles = (Palette: ThemeColors) =>
     emoji: { fontSize: 14 },
     label: { fontSize: 13.5, fontFamily: Font.sansMedium, color: Palette.ink },
     labelActive: { color: Palette.greenDark },
-    chevronUp: { transform: [{ rotate: '180deg' }] },
+    dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
     dropdown: {
-      marginTop: 8,
+      position: 'absolute',
       backgroundColor: Palette.card,
       borderWidth: 1,
       borderColor: Palette.cardBorder,
       borderRadius: Radius.md,
-      overflow: 'hidden',
-    },
-    dropdownScroll: { maxHeight: 260 },
+      paddingHorizontal: 14,
+      boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
+    } as object,
     row: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
       paddingVertical: 12,
-      paddingHorizontal: 14,
     },
-    rowActive: { backgroundColor: Palette.greenTint },
     rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Palette.cardBorder },
     rowLabel: { flex: 1, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
     check: { fontSize: 14, fontFamily: Font.sansBold, color: Palette.green },
