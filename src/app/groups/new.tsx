@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -23,21 +23,6 @@ export default function NewGroupScreen() {
   const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const currencyTouched = useRef(false);
-
-  // Best-effort suggestion from the user's Google account locale (see
-  // auth_service.go's currencyFromLocale) — skipped if they've already
-  // picked a currency themselves by the time this resolves.
-  useEffect(() => {
-    api
-      .get<{ default_currency?: string }>('/api/v1/users/me')
-      .then((me) => {
-        if (!currencyTouched.current && me.default_currency) {
-          setCurrency(me.default_currency);
-        }
-      })
-      .catch(() => {});
-  }, [api]);
 
   const create = async () => {
     if (!name.trim()) return setError(t('newGroup.nameRequired'));
@@ -98,13 +83,7 @@ export default function NewGroupScreen() {
 
           <Text style={styles.label}>{t('currencies.label')}</Text>
           <View style={styles.currencyPicker}>
-            <CurrencyPicker
-              value={currency}
-              onChange={(code) => {
-                currencyTouched.current = true;
-                setCurrency(code);
-              }}
-            />
+            <CurrencyPicker value={currency} onChange={setCurrency} />
           </View>
 
           <View style={styles.hintCard}>
