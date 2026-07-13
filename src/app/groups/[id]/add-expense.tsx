@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,7 +8,7 @@ import { BackButton } from '@/components/back-button';
 import { CategoryPicker } from '@/components/category-picker';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ScreenMeta } from '@/components/screen-meta';
-import { DEFAULT_CATEGORY } from '@/constants/categories';
+import { DEFAULT_CATEGORY, guessCategory } from '@/constants/categories';
 import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -96,6 +96,11 @@ export default function AddExpenseScreen() {
   // which the backend already treats as "leave the existing image alone".
   const [receiptImagePath, setReceiptImagePath] = useState<string | undefined>(prefillReceiptImagePath);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  // A receipt scan or an edit already has an authoritative category — this
+  // only guards the from-scratch manual entry path, where the category is
+  // just a keyword-based suggestion from the description until the user
+  // actually picks one themselves.
+  const categoryTouched = useRef(isEditMode || scanned);
 
   // A new expense is "dirty" once the user typed something real; an edit is
   // dirty once anything actually differs from what's being edited — either
@@ -146,6 +151,7 @@ export default function AddExpenseScreen() {
       setDesc(prefill.description);
       setAmount(prefill.amount);
       setCategory(prefill.category);
+      categoryTouched.current = true;
       setReceiptImagePath(prefill.receiptImagePath);
       setScanned(true);
     } catch {
@@ -381,7 +387,13 @@ export default function AddExpenseScreen() {
           <View style={styles.inputCard}>
             <TextInput
               value={desc}
-              onChangeText={setDesc}
+              onChangeText={(text) => {
+                setDesc(text);
+                if (!categoryTouched.current) {
+                  const guess = guessCategory(text);
+                  if (guess) setCategory(guess);
+                }
+              }}
               placeholder={t('addExpense.descriptionPlaceholder')}
               placeholderTextColor={Palette.muted}
               style={styles.descInput}
@@ -391,7 +403,13 @@ export default function AddExpenseScreen() {
           {/* category */}
           <Text style={styles.sectionLabel}>{t('categories.label')}</Text>
           <View style={styles.categoryPicker}>
-            <CategoryPicker value={category} onChange={setCategory} />
+            <CategoryPicker
+              value={category}
+              onChange={(slug) => {
+                categoryTouched.current = true;
+                setCategory(slug);
+              }}
+            />
           </View>
 
           {/* who paid */}
