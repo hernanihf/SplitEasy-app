@@ -27,6 +27,7 @@ type ImportPreview = {
   member_columns: string[];
   rows: ImportRow[];
   skipped_rows: number;
+  currency_mismatch?: string;
 };
 
 type ImportResult = { imported: number; failed: number };
@@ -76,6 +77,15 @@ export default function ImportCsvScreen() {
         formData.append('file', { uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'text/csv' } as unknown as Blob);
       }
       const parsed = await api.postFormData<ImportPreview>(`/api/v1/groups/${id}/import/preview`, formData);
+      if (parsed.currency_mismatch) {
+        setError(
+          t('importCsv.currencyMismatch', {
+            fileCurrency: parsed.currency_mismatch,
+            groupCurrency: group?.currency ?? '',
+          }),
+        );
+        return;
+      }
       // Best-effort local re-guess for rows Splitwise left uncategorized (its
       // "General" bucket maps to "other") — reuses the same keyword heuristic
       // that suggests a category while typing a manual expense.
