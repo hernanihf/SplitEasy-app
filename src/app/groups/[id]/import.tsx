@@ -56,7 +56,7 @@ export default function ImportCsvScreen() {
 
   const pickFile = async () => {
     const picked = await DocumentPicker.getDocumentAsync({
-      type: ['text/csv', 'text/comma-separated-values', 'application/vnd.ms-excel', '*/*'],
+      type: ['text/csv', 'text/comma-separated-values', 'application/vnd.ms-excel', 'text/plain'],
       copyToCacheDirectory: true,
     });
     if (picked.canceled) return;
