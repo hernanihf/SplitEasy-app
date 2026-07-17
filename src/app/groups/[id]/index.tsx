@@ -539,6 +539,13 @@ export default function GroupDetailScreen() {
               </View>
               <View style={styles.list}>
                 {history.length === 0 && <Text style={styles.muted}>{t('groupDetail.historyEmpty')}</Text>}
+                {expenses.length === 0 && settlements.length === 0 && (
+                  <Pressable
+                    onPress={() => router.push(`/groups/${id}/import`)}
+                    style={styles.importCta}>
+                    <Text style={styles.importCtaText}>{t('groupDetail.importCta')}</Text>
+                  </Pressable>
+                )}
                 {history.length > 0 && filteredHistory.length === 0 && (
                   <Text style={styles.muted}>{t('activity.noMatches')}</Text>
                 )}
@@ -920,6 +927,16 @@ const makeStyles = (Palette: ThemeColors) =>
   safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   muted: { color: Palette.muted, fontSize: 14, fontFamily: Font.sans },
+  importCta: {
+    marginTop: 12,
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: Radius.pill,
+    borderWidth: 1.5,
+    borderColor: Palette.cardBorder,
+  },
+  importCtaText: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink },
   topbar: {
     paddingHorizontal: 18,
     paddingTop: 2,
