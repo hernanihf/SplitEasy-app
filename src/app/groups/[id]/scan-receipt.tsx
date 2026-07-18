@@ -1,17 +1,19 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
 import { ScreenMeta } from '@/components/screen-meta';
+import { DEFAULT_CURRENCY } from '@/constants/currencies';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { assetToFile, navigateAfterScan, scanReceiptFile } from '@/lib/receipt-scan';
 import { useColors } from '@/lib/settings';
+import type { Group } from '@/app/groups/[id]/index';
 
 // Only the "Upload" flow (gallery / PDF) lands here. "Scan" opens the camera
 // directly from the add-expense screen without rendering this screen.
@@ -22,12 +24,21 @@ export default function ScanReceiptScreen() {
   const { api } = useAuth();
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
+
+  useEffect(() => {
+    if (!id) return;
+    api
+      .get<Group>(`/api/v1/groups/${id}`)
+      .then((g) => setCurrency(g.currency))
+      .catch(() => {});
+  }, [id, api]);
 
   const runScan = async (uri: string, name: string, mimeType: string) => {
     setScanning(true);
     setError(null);
     try {
-      const prefill = await scanReceiptFile(api, uri, name, mimeType);
+      const prefill = await scanReceiptFile(api, uri, name, mimeType, currency);
       navigateAfterScan(id as string, prefill);
     } catch {
       setError(t('scanReceipt.readError'));

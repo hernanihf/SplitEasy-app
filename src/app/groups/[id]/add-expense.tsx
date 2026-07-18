@@ -123,6 +123,7 @@ export default function AddExpenseScreen() {
   // "Scan" opens the camera directly and fills the form in place — no detour
   // through the scan-receipt screen. That screen is only for the "Upload" flow.
   const scanFromCamera = async () => {
+    if (!group) return;
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) return setScanError(t('scanReceipt.cameraPermission'));
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
@@ -132,7 +133,7 @@ export default function AddExpenseScreen() {
     setScanning(true);
     setScanError(null);
     try {
-      const prefill = await scanReceiptFile(api, file.uri, file.name, file.mimeType);
+      const prefill = await scanReceiptFile(api, file.uri, file.name, file.mimeType, group.currency);
       if (prefill.items.length > 0) {
         // Detected line items → go assign them per member.
         router.replace({

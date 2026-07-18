@@ -41,14 +41,22 @@ async function fileToFormData(uri: string, name: string, mimeType: string): Prom
   return formData;
 }
 
-/** Uploads a receipt file to the scan endpoint and returns expense-form prefill. */
+/**
+ * Uploads a receipt file to the scan endpoint and returns expense-form
+ * prefill. `currency` is the destination group's own currency (not the
+ * app's UI language) — it tells the model which decimal/thousands-separator
+ * convention the receipt's amounts are printed in, since the receipt itself
+ * frequently doesn't name its country at all.
+ */
 export async function scanReceiptFile(
   api: ApiClient,
   uri: string,
   name: string,
   mimeType: string,
+  currency: string,
 ): Promise<ScannedExpense> {
   const formData = await fileToFormData(uri, name, mimeType);
+  formData.append('currency', currency);
   const scan = await api.postFormData<ReceiptScan>('/api/v1/receipts/scan', formData);
   return {
     description: scan.merchant_name || t('scanReceipt.defaultMerchant'),

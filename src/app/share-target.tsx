@@ -13,7 +13,7 @@ import { useColors } from '@/lib/settings';
 const SHARE_TARGET_CACHE = 'spliteasy-share-target';
 const SHARED_RECEIPT_URL = '/shared-receipt';
 
-type GroupOption = { id: number; name: string; emoji: string };
+type GroupOption = { id: number; name: string; emoji: string; currency: string };
 
 type Status = 'loading' | 'choosing' | 'scanning' | 'error';
 
@@ -34,7 +34,7 @@ export default function ShareTargetScreen() {
   const imageRef = useRef<{ uri: string; mimeType: string } | null>(null);
 
   const proceedWithGroup = useCallback(
-    async (groupId: number) => {
+    async (groupId: number, currency: string) => {
       setStatus('scanning');
       try {
         const prefill = await scanReceiptFile(
@@ -42,6 +42,7 @@ export default function ShareTargetScreen() {
           imageRef.current!.uri,
           `receipt.${imageRef.current!.mimeType.split('/')[1] ?? 'jpg'}`,
           imageRef.current!.mimeType,
+          currency,
         );
         navigateAfterScan(String(groupId), prefill);
       } catch {
@@ -77,8 +78,14 @@ export default function ShareTargetScreen() {
 
       const lastGroupId = await getLastGroupId();
       if (lastGroupId) {
-        proceedWithGroup(lastGroupId);
-        return;
+        try {
+          const group = await api.get<{ currency: string }>(`/api/v1/groups/${lastGroupId}`);
+          proceedWithGroup(lastGroupId, group.currency);
+          return;
+        } catch {
+          // Fall through to the group picker — e.g. the remembered group was
+          // deleted, or this request failed transiently.
+        }
       }
 
       try {
@@ -94,7 +101,7 @@ export default function ShareTargetScreen() {
 
   const chooseGroup = (group: GroupOption) => {
     rememberLastGroup(group.id);
-    proceedWithGroup(group.id);
+    proceedWithGroup(group.id, group.currency);
   };
 
   return (
