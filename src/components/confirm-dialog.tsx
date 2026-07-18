@@ -1,4 +1,4 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { t } from '@/lib/i18n';
@@ -10,6 +10,11 @@ type Props = {
   message?: string;
   confirmLabel?: string;
   destructive?: boolean;
+  // Disables both buttons and dims the confirm button while onConfirm's work
+  // is still in flight — without this, a slow confirm action (e.g. a large
+  // import) leaves the button tappable with no feedback, and a second tap
+  // fires a second concurrent request.
+  loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -24,6 +29,7 @@ export function ConfirmDialog({
   message,
   confirmLabel,
   destructive = true,
+  loading = false,
   onConfirm,
   onCancel,
 }: Props) {
@@ -32,21 +38,26 @@ export function ConfirmDialog({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <Pressable style={styles.dim} onPress={onCancel} />
+      <Pressable style={styles.dim} onPress={loading ? undefined : onCancel} />
       <View style={styles.center}>
         <View style={styles.sheet}>
           <Text style={styles.title}>{title}</Text>
           {message && <Text style={styles.message}>{message}</Text>}
           <View style={styles.row}>
-            <Pressable onPress={onCancel} style={styles.cancelBtn}>
+            <Pressable onPress={onCancel} disabled={loading} style={[styles.cancelBtn, loading && styles.disabled]}>
               <Text style={styles.cancelText}>{t('common.cancel')}</Text>
             </Pressable>
             <Pressable
               onPress={onConfirm}
-              style={[styles.confirmBtn, destructive && styles.confirmBtnDestructive]}>
-              <Text style={[styles.confirmText, destructive && styles.confirmTextDestructive]}>
-                {confirmLabel ?? t('common.delete')}
-              </Text>
+              disabled={loading}
+              style={[styles.confirmBtn, destructive && styles.confirmBtnDestructive, loading && styles.disabled]}>
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={[styles.confirmText, destructive && styles.confirmTextDestructive]}>
+                  {confirmLabel ?? t('common.delete')}
+                </Text>
+              )}
             </Pressable>
           </View>
         </View>
@@ -93,4 +104,5 @@ const makeStyles = (Palette: ThemeColors) =>
     confirmBtnDestructive: { backgroundColor: Palette.red },
     confirmText: { fontSize: 14, fontFamily: Font.sansSemibold, color: '#fff' },
     confirmTextDestructive: { color: '#fff' },
+    disabled: { opacity: 0.6 },
   });

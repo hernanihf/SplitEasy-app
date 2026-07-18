@@ -116,7 +116,7 @@ export default function ImportCsvScreen() {
   const allMapped = preview != null && preview.member_columns.every((c) => mapping[c] != null);
 
   const doImport = async () => {
-    if (!preview || !allMapped) return;
+    if (!preview || !allMapped || importing) return;
     setImporting(true);
     setError(null);
     try {
@@ -242,6 +242,7 @@ export default function ImportCsvScreen() {
         message={t('importCsv.confirmMessage')}
         confirmLabel={t('importCsv.confirm')}
         destructive={false}
+        loading={importing}
         onCancel={() => setConfirming(false)}
         onConfirm={doImport}
       />
