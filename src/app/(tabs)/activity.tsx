@@ -18,11 +18,12 @@ import { useAuth } from '@/lib/auth';
 import { periodCutoff, type PeriodFilter } from '@/lib/date-filter';
 import { formatAmount, i18n, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
+import { useUnreadActivity } from '@/lib/unread-activity';
 import type { Expense, Settlement } from '@/app/groups/[id]/index';
 
 type ActivityEvent = {
   id: number;
-  type: 'expense' | 'settlement';
+  type: 'expense' | 'settlement' | 'comment';
   group_id: number;
   group_name: string;
   group_emoji: string;
@@ -38,9 +39,14 @@ type ActivityEvent = {
   // the feed (struck through, non-openable) instead of vanishing.
   deleted?: boolean;
   deleted_by_name?: string;
+  // Comments only: which kind of thing (and its title) the comment is on —
+  // id above is that parent's id, not the comment's own, so opening a
+  // comment event lands on the same detail view its parent would.
+  parent_type?: 'expense' | 'settlement';
+  parent_title?: string;
 };
 
-type TypeFilter = 'all' | 'expense' | 'settlement';
+type TypeFilter = 'all' | 'expense' | 'settlement' | 'comment';
 
 function shortDate(iso: string): string {
   const d = new Date(iso);
@@ -64,6 +70,7 @@ export default function ActivityScreen() {
   const [filterUserId, setFilterUserId] = useState<number | null>(null);
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
+  const { markSeen } = useUnreadActivity();
 
   useFocusEffect(
     useCallback(() => {
@@ -73,7 +80,10 @@ export default function ActivityScreen() {
         .then((data) => setEvents(data ?? []))
         .catch(() => {})
         .finally(() => setIsLoading(false));
-    }, [api]),
+      // Viewing the feed is what "read" means here — clears the tab bar
+      // badge regardless of whether the list fetch above succeeds.
+      markSeen();
+    }, [api, markSeen]),
   );
 
   useEffect(() => {
@@ -94,7 +104,11 @@ export default function ActivityScreen() {
       if (openingKey || ev.deleted) return;
       setOpeningKey(key);
       try {
-        if (ev.type === 'settlement') {
+        // A comment event's id is its parent's id (see the ActivityEvent
+        // type comment) — open the same detail view the parent itself
+        // would, keyed off what kind of thing that parent is.
+        const isSettlement = ev.type === 'settlement' || ev.parent_type === 'settlement';
+        if (isSettlement) {
           const settlement = await api.get<Settlement>(`/api/v1/settlements/${ev.id}`);
           router.push({
             pathname: '/groups/[id]/settlement-detail',
@@ -211,9 +225,11 @@ export default function ActivityScreen() {
           <View style={styles.list}>
             {filteredEvents.map((ev, i) => {
               const settlement = ev.type === 'settlement';
-              const emoji = settlement ? '💸' : categoryEmoji(ev.category, ev.title);
-              // Payments share a fixed tile colour so they match the group history.
-              const tileKey = settlement ? 'payment' : ev.title;
+              const comment = ev.type === 'comment';
+              const emoji = settlement ? '💸' : comment ? '💬' : categoryEmoji(ev.category, ev.title);
+              // Payments and comments each share a fixed tile colour so they
+              // match the group history / read consistently across rows.
+              const tileKey = settlement ? 'payment' : comment ? 'comment' : ev.title;
               const key = `${ev.type}-${ev.id}-${i}`;
               return (
                 <Pressable
@@ -232,14 +248,18 @@ export default function ActivityScreen() {
                         ? ev.deleted_by_name
                           ? t('activity.deletedBy', { name: ev.deleted_by_name, group: ev.group_name })
                           : t('activity.deletedIn', { group: ev.group_name })
-                        : settlement
-                          ? t('activity.settledIn', { group: ev.group_name })
-                          : t('activity.paidBy', { name: ev.actor_name, group: ev.group_name })}
+                        : comment
+                          ? t('activity.commentedOn', { name: ev.actor_name, title: ev.parent_title ?? '', group: ev.group_name })
+                          : settlement
+                            ? t('activity.settledIn', { group: ev.group_name })
+                            : t('activity.paidBy', { name: ev.actor_name, group: ev.group_name })}
                     </Text>
                   </View>
                   <View style={styles.amountCol}>
                     {openingKey === key ? (
                       <ActivityIndicator color={Palette.muted} size="small" />
+                    ) : comment ? (
+                      <Text style={styles.date}>{shortDate(ev.date)}</Text>
                     ) : (
                       <>
                         <Text
@@ -283,6 +303,7 @@ export default function ActivityScreen() {
               { value: 'all', label: t('activity.typeAll') },
               { value: 'expense', label: t('activity.typeExpenses') },
               { value: 'settlement', label: t('activity.typePayments') },
+              { value: 'comment', label: t('activity.typeComments') },
             ]}
           />
         </FilterSection>

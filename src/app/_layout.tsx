@@ -20,6 +20,7 @@ import { AppLoading } from '@/components/app-loading';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ensureSubscribed } from '@/lib/push';
 import { SettingsProvider, useSettings } from '@/lib/settings';
+import { UnreadActivityProvider } from '@/lib/unread-activity';
 
 // Max content width: the app is mobile-first, so on wide (web/desktop)
 // viewports we centre it in a phone-sized column instead of stretching.
@@ -124,7 +125,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SettingsProvider>
         <AuthProvider>
-          <ThemedShell />
+          <UnreadActivityProvider>
+            <ThemedShell />
+          </UnreadActivityProvider>
         </AuthProvider>
       </SettingsProvider>
     </GestureHandlerRootView>

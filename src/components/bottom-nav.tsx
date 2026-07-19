@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Font, type ThemeColors } from '@/constants/design';
 import { t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
+import { useUnreadActivity } from '@/lib/unread-activity';
 
 const ORDER = ['index', 'activity', 'profile'] as const;
 type TabName = (typeof ORDER)[number];
@@ -26,6 +27,7 @@ type TabBarProps = {
 export function BottomNav({ state, navigation, active }: TabBarProps) {
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
+  const { count: unreadCount } = useUnreadActivity();
 
   const activeName: TabName = state ? (state.routes[state.index]?.name as TabName) : (active ?? 'index');
 
@@ -49,7 +51,14 @@ export function BottomNav({ state, navigation, active }: TabBarProps) {
 
         return (
           <Pressable key={name} onPress={onPress} style={styles.tab}>
-            <Text style={[styles.glyph, { color }]}>{tab.glyph}</Text>
+            <View style={styles.glyphWrap}>
+              <Text style={[styles.glyph, { color }]}>{tab.glyph}</Text>
+              {name === 'activity' && unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
+            </View>
             <Text style={[styles.label, { color }]}>{t(tab.labelKey)}</Text>
           </Pressable>
         );
@@ -75,8 +84,30 @@ const makeStyles = (Palette: ThemeColors) =>
     alignItems: 'center',
     gap: 4,
   },
+  glyphWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   glyph: {
     fontSize: 19,
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: Palette.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontSize: 9.5,
+    lineHeight: 11,
+    fontFamily: Font.sansBold,
+    color: '#fff',
   },
   label: {
     fontSize: 10.5,
