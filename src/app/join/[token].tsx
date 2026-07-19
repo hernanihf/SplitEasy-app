@@ -16,6 +16,7 @@ type GroupPreview = {
   emoji: string;
   currency: string;
   member_count: number;
+  created_by_name: string;
 };
 
 export default function JoinScreen() {
@@ -80,7 +81,11 @@ export default function JoinScreen() {
             <Text style={styles.meta}>
               {t('groupDetail.memberCount', { count: preview.member_count })} · {preview.currency}
             </Text>
-            <Text style={styles.description}>{t('join.description')}</Text>
+            <Text style={styles.description}>
+              {preview.created_by_name
+                ? t('join.descriptionWithCreator', { name: preview.created_by_name })
+                : t('join.description')}
+            </Text>
 
             <Pressable
               onPress={handleJoin}

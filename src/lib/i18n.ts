@@ -142,6 +142,7 @@ const translations = {
     join: {
       title: 'Join group',
       description: "You've been invited to split expenses together on SplitEasy.",
+      descriptionWithCreator: 'A group created by %{name} on SplitEasy.',
       confirm: 'Join group',
       joining: 'Joining…',
       notNow: 'Not now',
@@ -456,6 +457,7 @@ const translations = {
     join: {
       title: 'Unirse a un grupo',
       description: 'Te invitaron a dividir gastos juntos en SplitEasy.',
+      descriptionWithCreator: 'Un grupo creado por %{name} en SplitEasy.',
       confirm: 'Unirme al grupo',
       joining: 'Uniéndote…',
       notNow: 'Ahora no',
