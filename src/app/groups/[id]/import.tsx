@@ -196,7 +196,9 @@ export default function ImportCsvScreen() {
                 {t('importCsv.resultImported', { count: result.imported })}
                 {result.failed > 0 ? t('importCsv.resultFailed', { count: result.failed }) : ''}
               </Text>
-              <Pressable onPress={() => router.replace(`/groups/${id}`)} style={styles.primaryBtn}>
+              <Pressable
+                onPress={() => router.replace(`/groups/${id}`)}
+                style={[styles.primaryBtn, styles.resultBtn]}>
                 <Text style={styles.primaryBtnText}>{t('importCsv.goToGroup')}</Text>
               </Pressable>
             </View>
@@ -377,4 +379,7 @@ const makeStyles = (Palette: ThemeColors) =>
     },
     resultCheckText: { color: '#fff', fontSize: 22 },
     resultText: { fontSize: 14.5, fontFamily: Font.sansMedium, color: Palette.greenDark, textAlign: 'center' },
+    // resultCard centers its children, which otherwise shrinks this button
+    // to its text — stretch it to match every other button on this screen.
+    resultBtn: { alignSelf: 'stretch', marginTop: 4 },
   });
