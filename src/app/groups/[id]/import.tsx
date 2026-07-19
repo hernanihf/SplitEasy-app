@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ScreenMeta } from '@/components/screen-meta';
 import { guessCategory } from '@/constants/categories';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
+import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -115,24 +116,32 @@ export default function ImportCsvScreen() {
 
   const allMapped = preview != null && preview.member_columns.every((c) => mapping[c] != null);
 
-  // A large import (hundreds of rows, inserted one at a time server-side) can
-  // take a minute or more — long enough that the request can fail client-side
-  // (a timeout, a dropped connection) after the import already finished on
-  // the server. Rather than trust the network error alone, poll the group's
-  // real expense count: since Import() only ever runs on an empty group
-  // (ErrGroupNotEmpty otherwise), any expenses showing up here can only mean
-  // this import succeeded.
+  // A large import (hundreds of rows, inserted one at a time server-side, and
+  // committed as it goes rather than in one big transaction) can take a
+  // minute or more — long enough that the request can fail client-side (a
+  // timeout, a dropped connection, or a second confirm attempt racing the
+  // first) well before the import is actually done landing rows. Rather than
+  // trust a single failed request, poll the group's real expense count until
+  // it stops growing: since Import() only ever runs on an empty group
+  // (ErrGroupNotEmpty otherwise), any expenses showing up here can only be
+  // from this import, and waiting for the count to stabilize (rather than
+  // just non-zero) avoids reporting a partial number mid-import.
   const pollForImportedExpenses = async (): Promise<number | null> => {
-    for (let attempt = 0; attempt < 15; attempt++) {
+    let lastCount = -1;
+    for (let attempt = 0; attempt < 20; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 4000));
       try {
         const expenses = await api.get<unknown[]>(`/api/v1/groups/${id}/expenses`);
-        if (expenses.length > 0) return expenses.length;
+        if (expenses.length > 0 && expenses.length === lastCount) return expenses.length;
+        lastCount = expenses.length;
       } catch {
         // Transient — keep polling.
       }
     }
-    return null;
+    // Ran out of attempts still mid-import (very large file) — report the
+    // last known count rather than a hard error, since we do know it's
+    // nonzero and therefore succeeding.
+    return lastCount > 0 ? lastCount : null;
   };
 
   const doImport = async () => {
@@ -146,12 +155,16 @@ export default function ImportCsvScreen() {
         member_mapping: mapping,
       });
       setResult(res);
-    } catch {
-      // Only worth polling if the request had actually been running a while
-      // (a few seconds) — an instant failure is a real error (bad request,
-      // no network), not a lost response from a slow import.
+    } catch (err) {
+      // A 409 specifically means the group is no longer empty — since this
+      // action only ever runs against an empty group, that can only mean an
+      // import (this request, or an earlier one still committing rows when
+      // this one raced it) already landed data. Any other failure only
+      // deserves a poll if the request had actually been running a while — a
+      // lost response from a slow import, not an instant real error.
       const ranFor = Date.now() - startedAt;
-      const imported = ranFor > 5000 ? await pollForImportedExpenses() : null;
+      const worthPolling = (err instanceof ApiError && err.status === 409) || ranFor > 5000;
+      const imported = worthPolling ? await pollForImportedExpenses() : null;
       if (imported != null) {
         setResult({ imported, failed: 0 });
       } else {
