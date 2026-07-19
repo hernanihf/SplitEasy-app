@@ -115,10 +115,31 @@ export default function ImportCsvScreen() {
 
   const allMapped = preview != null && preview.member_columns.every((c) => mapping[c] != null);
 
+  // A large import (hundreds of rows, inserted one at a time server-side) can
+  // take a minute or more — long enough that the request can fail client-side
+  // (a timeout, a dropped connection) after the import already finished on
+  // the server. Rather than trust the network error alone, poll the group's
+  // real expense count: since Import() only ever runs on an empty group
+  // (ErrGroupNotEmpty otherwise), any expenses showing up here can only mean
+  // this import succeeded.
+  const pollForImportedExpenses = async (): Promise<number | null> => {
+    for (let attempt = 0; attempt < 15; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+      try {
+        const expenses = await api.get<unknown[]>(`/api/v1/groups/${id}/expenses`);
+        if (expenses.length > 0) return expenses.length;
+      } catch {
+        // Transient — keep polling.
+      }
+    }
+    return null;
+  };
+
   const doImport = async () => {
     if (!preview || !allMapped || importing) return;
     setImporting(true);
     setError(null);
+    const startedAt = Date.now();
     try {
       const res = await api.post<ImportResult>(`/api/v1/groups/${id}/import`, {
         rows: preview.rows,
@@ -126,7 +147,16 @@ export default function ImportCsvScreen() {
       });
       setResult(res);
     } catch {
-      setError(t('importCsv.importError'));
+      // Only worth polling if the request had actually been running a while
+      // (a few seconds) — an instant failure is a real error (bad request,
+      // no network), not a lost response from a slow import.
+      const ranFor = Date.now() - startedAt;
+      const imported = ranFor > 5000 ? await pollForImportedExpenses() : null;
+      if (imported != null) {
+        setResult({ imported, failed: 0 });
+      } else {
+        setError(t('importCsv.importError'));
+      }
     } finally {
       setImporting(false);
       setConfirming(false);
