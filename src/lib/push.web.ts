@@ -65,10 +65,14 @@ export async function requestPermissionAndSubscribe(api: ApiClient): Promise<boo
 }
 
 // Called on app boot. If the user already granted browser permission and has
-// push enabled server-side, but *this* browser/device doesn't have a
-// subscription yet (e.g. push was turned on from another device), registers
-// it silently — never prompts, since the permission dialog only shows once
-// per site and firing it unprompted isn't possible anyway.
+// push enabled server-side, (re-)registers this browser/device — never
+// prompts, since the permission dialog only shows once per site and firing
+// it unprompted isn't possible anyway. Always re-POSTs the subscription to
+// the backend even if the browser already has one cached: /push/subscribe is
+// a cheap upsert (unique on user_id+endpoint), and re-sending it is what lets
+// a device recover if the backend's record was ever lost (e.g. a database
+// reset) without the browser-side PushSubscription object — which is what
+// getSubscription() below checks — knowing anything changed.
 export async function ensureSubscribed(api: ApiClient): Promise<void> {
   if (!isPushSupported()) return;
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
@@ -77,13 +81,8 @@ export async function ensureSubscribed(api: ApiClient): Promise<void> {
     const me = await api.get<{ push_enabled: boolean }>('/api/v1/users/me');
     if (!me.push_enabled) return;
 
-    const registration = await navigator.serviceWorker.ready;
-    if (await registration.pushManager.getSubscription()) return;
-
-    const sub = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
+    const sub = await getOrCreateSubscription();
+    if (!sub) return;
     await api.post('/api/v1/push/subscribe', subscriptionToPayload(sub));
   } catch {
     // Best-effort — a failure here shouldn't disrupt app boot.
