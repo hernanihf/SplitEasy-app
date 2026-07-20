@@ -21,6 +21,10 @@ type Props = {
   myId: number | null;
   onAdd: (body: string) => Promise<void>;
   onDelete: (commentId: number) => Promise<void>;
+  // Hides the composer and per-comment delete affordance — existing
+  // comments still render, for viewing a deleted expense/settlement's
+  // discussion without being able to add to or edit it.
+  readOnly?: boolean;
 };
 
 function formatCommentDate(iso: string): string {
@@ -35,7 +39,7 @@ function formatCommentDate(iso: string): string {
   }).format(d);
 }
 
-export function CommentsSection({ comments, loading, loadError, myId, onAdd, onDelete }: Props) {
+export function CommentsSection({ comments, loading, loadError, myId, onAdd, onDelete, readOnly = false }: Props) {
   const Palette = useColors();
   const styles = makeStyles(Palette);
 
@@ -111,7 +115,7 @@ export function CommentsSection({ comments, loading, loadError, myId, onAdd, onD
               </View>
               <Text style={styles.body}>{c.body}</Text>
             </View>
-            {myId === c.user.id && (
+            {!readOnly && myId === c.user.id && (
               <Pressable onPress={() => setDeletingID(c.id)} hitSlop={8} style={styles.deleteBtn}>
                 <Text style={styles.deleteBtnText}>✕</Text>
               </Pressable>
@@ -121,27 +125,29 @@ export function CommentsSection({ comments, loading, loadError, myId, onAdd, onD
 
       {deleteError && <Text style={styles.errorText}>{t('comments.deleteError')}</Text>}
 
-      <View style={styles.composer}>
-        <TextInput
-          value={draft}
-          onChangeText={setDraft}
-          placeholder={t('comments.placeholder')}
-          placeholderTextColor={Palette.muted}
-          style={styles.input}
-          multiline
-        />
-        <Pressable
-          onPress={submit}
-          disabled={!draft.trim() || posting}
-          style={[styles.sendBtn, (!draft.trim() || posting) && styles.sendBtnDisabled]}>
-          {posting ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.sendBtnText}>{t('comments.send')}</Text>
-          )}
-        </Pressable>
-      </View>
-      {postError && <Text style={styles.errorText}>{t('comments.postError')}</Text>}
+      {!readOnly && (
+        <View style={styles.composer}>
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder={t('comments.placeholder')}
+            placeholderTextColor={Palette.muted}
+            style={styles.input}
+            multiline
+          />
+          <Pressable
+            onPress={submit}
+            disabled={!draft.trim() || posting}
+            style={[styles.sendBtn, (!draft.trim() || posting) && styles.sendBtnDisabled]}>
+            {posting ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.sendBtnText}>{t('comments.send')}</Text>
+            )}
+          </Pressable>
+        </View>
+      )}
+      {!readOnly && postError && <Text style={styles.errorText}>{t('comments.postError')}</Text>}
 
       <ConfirmDialog
         visible={deletingID != null}

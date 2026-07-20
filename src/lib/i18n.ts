@@ -237,6 +237,7 @@ const translations = {
       deleteMessage: "This can't be undone from the app.",
       deleteError: 'Could not delete the expense. Please try again.',
       notAllowed: 'Only the payer or a split participant can edit or delete this expense.',
+      readOnly: "you're viewing it read-only",
     },
     settlementDetail: {
       title: 'Payment detail',
@@ -554,6 +555,7 @@ const translations = {
       deleteMessage: 'Esto no se puede deshacer desde la app.',
       deleteError: 'No se pudo borrar el gasto. Intentá de nuevo.',
       notAllowed: 'Solo quien pagó o participa del split puede editar o borrar este gasto.',
+      readOnly: 'lo estás viendo en modo solo lectura',
     },
     settlementDetail: {
       title: 'Detalle del pago',

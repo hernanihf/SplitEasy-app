@@ -640,20 +640,17 @@ export default function GroupDetailScreen() {
                 const emoji = categoryEmoji(ex.category, ex.description);
                 // Mirrors the backend's own rule (isPayerOrSplitParticipant):
                 // only the payer or a split participant may delete it. A
-                // deleted expense is never (re-)deletable or tappable — it's
-                // shown struck through purely for transparency.
+                // deleted expense is never re-deletable, but it does still
+                // open — read-only — so the group can check what it was for.
                 const canDeleteExpense =
                   !isDeleted && myId != null && (paidByMe || (ex.splits ?? []).some((s) => s.user_id === myId));
                 const expenseCard = (
                   <Pressable
-                    onPress={
-                      isDeleted
-                        ? undefined
-                        : () =>
-                            router.push({
-                              pathname: '/groups/[id]/expense-detail',
-                              params: { id: id as string, expense: JSON.stringify(ex), myId: String(myId ?? '') },
-                            })
+                    onPress={() =>
+                      router.push({
+                        pathname: '/groups/[id]/expense-detail',
+                        params: { id: id as string, expense: JSON.stringify(ex), myId: String(myId ?? '') },
+                      })
                     }
                     style={({ pressed }) => [styles.expenseCard, pressed && styles.pressed]}>
                     <View style={[styles.smallAvatar, { backgroundColor: tileBg(ex.description) }, isDeleted && styles.deletedTile]}>

@@ -101,7 +101,9 @@ export default function ActivityScreen() {
 
   const openEvent = useCallback(
     async (ev: ActivityEvent, key: string) => {
-      if (openingKey || ev.deleted) return;
+      // A deleted expense still opens — read-only — so the group can check
+      // what it was for; only an in-flight open blocks a second tap.
+      if (openingKey) return;
       setOpeningKey(key);
       try {
         // A comment event's id is its parent's id (see the ActivityEvent
@@ -234,7 +236,7 @@ export default function ActivityScreen() {
               return (
                 <Pressable
                   key={key}
-                  onPress={ev.deleted ? undefined : () => openEvent(ev, key)}
+                  onPress={() => openEvent(ev, key)}
                   style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
                   <View style={[styles.tile, { backgroundColor: tileBg(tileKey) }, ev.deleted && styles.deletedTile]}>
                     <Text style={styles.tileEmoji}>{emoji}</Text>

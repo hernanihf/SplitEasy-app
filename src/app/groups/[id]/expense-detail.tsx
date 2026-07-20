@@ -107,10 +107,16 @@ export default function ExpenseDetailScreen() {
     return <View style={styles.root} />;
   }
 
+  const isDeleted = !!expense.deleted_at;
+
   // Mirrors the backend's own rule: only the payer or a split participant
   // may edit or delete. Hiding the buttons otherwise avoids a dead-end 403.
+  // A deleted expense is never modifiable — it's shown read-only purely so
+  // the group can still see what it was for.
   const canModify =
-    myId != null && (expense.paid_by.id === myId || (expense.splits ?? []).some((s) => s.user_id === myId));
+    !isDeleted &&
+    myId != null &&
+    (expense.paid_by.id === myId || (expense.splits ?? []).some((s) => s.user_id === myId));
 
   const handleEdit = () => {
     const hasItems = (expense.items ?? []).length > 0;
@@ -167,6 +173,18 @@ export default function ExpenseDetailScreen() {
         </View>
 
         {error && <Text style={styles.error}>{error}</Text>}
+
+        {isDeleted && (
+          <View style={styles.deletedBanner}>
+            <Text style={styles.deletedBannerText}>
+              {expense.deleted_by
+                ? t('groupDetail.deletedBy', { name: expense.deleted_by.name })
+                : t('groupDetail.deletedTag')}
+              {' — '}
+              {t('expenseDetail.readOnly')}
+            </Text>
+          </View>
+        )}
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.hero}>
@@ -246,6 +264,7 @@ export default function ExpenseDetailScreen() {
             myId={myId}
             onAdd={handleAddComment}
             onDelete={handleDeleteComment}
+            readOnly={isDeleted}
           />
         </ScrollView>
       </SafeAreaView>
@@ -278,6 +297,18 @@ const makeStyles = (Palette: ThemeColors) =>
     topAction: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
     topActionIcon: { fontSize: 16 },
     error: { color: Palette.red, fontSize: 13, marginTop: 4, marginBottom: 4, marginHorizontal: 20 },
+    deletedBanner: {
+      marginHorizontal: 20,
+      marginTop: 4,
+      marginBottom: 4,
+      paddingVertical: 9,
+      paddingHorizontal: 13,
+      borderRadius: Radius.md,
+      backgroundColor: Palette.inputBg,
+      borderWidth: 1,
+      borderColor: Palette.cardBorder,
+    },
+    deletedBannerText: { fontSize: 12.5, color: Palette.muted, fontFamily: Font.sans },
     scroll: { paddingHorizontal: 20, paddingBottom: 28 },
     hero: { alignItems: 'center', paddingVertical: 18 },
     heroTile: {
