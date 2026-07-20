@@ -44,6 +44,9 @@ type ActivityEvent = {
   // comment event lands on the same detail view its parent would.
   parent_type?: 'expense' | 'settlement';
   parent_title?: string;
+  // True when this event happened after the user last viewed the feed and
+  // they didn't cause it themselves — drives the unread dot below.
+  is_unread: boolean;
 };
 
 type TypeFilter = 'all' | 'expense' | 'settlement' | 'comment';
@@ -79,10 +82,14 @@ export default function ActivityScreen() {
         .get<ActivityEvent[]>('/api/v1/activity')
         .then((data) => setEvents(data ?? []))
         .catch(() => {})
-        .finally(() => setIsLoading(false));
-      // Viewing the feed is what "read" means here — clears the tab bar
-      // badge regardless of whether the list fetch above succeeds.
-      markSeen();
+        .finally(() => {
+          setIsLoading(false);
+          // Marking seen after the fetch (not in parallel) matters: it
+          // bumps activity_last_seen_at server-side, which is exactly what
+          // is_unread on the events above is computed against. Firing it
+          // first would make everything look already-read on this load.
+          markSeen();
+        });
     }, [api, markSeen]),
   );
 
@@ -242,9 +249,14 @@ export default function ActivityScreen() {
                     <Text style={styles.tileEmoji}>{emoji}</Text>
                   </View>
                   <View style={styles.info}>
-                    <Text style={[styles.rowTitle, ev.deleted && styles.deletedText]} numberOfLines={1}>
-                      {ev.title}
-                    </Text>
+                    <View style={styles.titleRow}>
+                      {ev.is_unread && <View style={styles.unreadDot} />}
+                      <Text
+                        style={[styles.rowTitle, ev.is_unread && styles.rowTitleUnread, ev.deleted && styles.deletedText]}
+                        numberOfLines={1}>
+                        {ev.title}
+                      </Text>
+                    </View>
                     <Text style={styles.rowSub} numberOfLines={1}>
                       {ev.deleted
                         ? ev.deleted_by_name
@@ -423,7 +435,10 @@ const makeStyles = (Palette: ThemeColors) =>
   tile: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   tileEmoji: { fontSize: 18 },
   info: { flex: 1, minWidth: 0 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  unreadDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: Palette.red },
   rowTitle: { fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
+  rowTitleUnread: { fontFamily: Font.sansSemibold },
   rowSub: { marginTop: 2, fontSize: 12, color: Palette.muted },
   amountCol: { alignItems: 'flex-end', minWidth: 30 },
   amount: { fontSize: 13.5, fontFamily: Font.monoSemibold },
