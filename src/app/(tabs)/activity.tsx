@@ -245,19 +245,26 @@ export default function ActivityScreen() {
                   key={key}
                   onPress={() => openEvent(ev, key)}
                   style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
-                  <View style={[styles.tile, { backgroundColor: tileBg(tileKey) }, ev.deleted && styles.deletedTile]}>
+                  <View
+                    style={[
+                      styles.tile,
+                      { backgroundColor: tileBg(tileKey) },
+                      !ev.is_unread && styles.tileRead,
+                      ev.deleted && styles.deletedTile,
+                    ]}>
                     <Text style={styles.tileEmoji}>{emoji}</Text>
                   </View>
                   <View style={styles.info}>
-                    <View style={styles.titleRow}>
-                      {ev.is_unread && <View style={styles.unreadDot} />}
-                      <Text
-                        style={[styles.rowTitle, ev.is_unread && styles.rowTitleUnread, ev.deleted && styles.deletedText]}
-                        numberOfLines={1}>
-                        {ev.title}
-                      </Text>
-                    </View>
-                    <Text style={styles.rowSub} numberOfLines={1}>
+                    <Text
+                      style={[
+                        styles.rowTitle,
+                        ev.is_unread ? styles.rowTitleUnread : styles.rowTitleRead,
+                        ev.deleted && styles.deletedText,
+                      ]}
+                      numberOfLines={1}>
+                      {ev.title}
+                    </Text>
+                    <Text style={[styles.rowSub, !ev.is_unread && styles.rowSubRead]} numberOfLines={1}>
                       {ev.deleted
                         ? ev.deleted_by_name
                           ? t('activity.deletedBy', { name: ev.deleted_by_name, group: ev.group_name })
@@ -280,6 +287,7 @@ export default function ActivityScreen() {
                           style={[
                             styles.amount,
                             { color: settlement ? Palette.green : Palette.ink },
+                            !ev.is_unread && styles.amountRead,
                             ev.deleted && styles.deletedText,
                           ]}>
                           {formatAmount(ev.amount, ev.currency)}
@@ -435,14 +443,18 @@ const makeStyles = (Palette: ThemeColors) =>
   tile: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   tileEmoji: { fontSize: 18 },
   info: { flex: 1, minWidth: 0 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  unreadDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: Palette.red },
   rowTitle: { fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
-  rowTitleUnread: { fontFamily: Font.sansSemibold },
+  // Unread rows read at full brightness (bold title); once seen they settle
+  // into a quieter, greyed-out treatment instead of a dot or badge.
+  rowTitleUnread: { fontFamily: Font.sansBold },
+  rowTitleRead: { fontFamily: Font.sans, color: Palette.muted },
   rowSub: { marginTop: 2, fontSize: 12, color: Palette.muted },
+  rowSubRead: { color: Palette.faint },
   amountCol: { alignItems: 'flex-end', minWidth: 30 },
   amount: { fontSize: 13.5, fontFamily: Font.monoSemibold },
+  amountRead: { color: Palette.muted },
   date: { marginTop: 2, fontSize: 11, color: Palette.faint },
+  tileRead: { opacity: 0.55 },
   deletedTile: { opacity: 0.5 },
   deletedText: { color: Palette.muted, textDecorationLine: 'line-through' },
   toast: {
