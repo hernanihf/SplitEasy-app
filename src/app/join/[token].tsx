@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
 import { Icon } from '@/components/icon';
 import { ScreenMeta } from '@/components/screen-meta';
-import { Font, Radius, groupIcon, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, Radius, TILE_ICON_COLOR, groupIcon, tileBg, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -76,7 +76,7 @@ export default function JoinScreen() {
         ) : (
           <View style={styles.center}>
             <View style={[styles.tile, { backgroundColor: tileBg(preview.name) }]}>
-              <Icon name={groupIcon(preview.emoji)} size={34} color={Palette.ink} />
+              <Icon name={groupIcon(preview.emoji)} size={34} color={TILE_ICON_COLOR} />
             </View>
             <Text style={styles.groupName}>{preview.name}</Text>
             <Text style={styles.meta}>

@@ -11,7 +11,7 @@ import { Icon } from '@/components/icon';
 import { InstallPrompt } from '@/components/install-prompt';
 import { OfflineBanner } from '@/components/offline-banner';
 import { ScreenMeta } from '@/components/screen-meta';
-import { Font, Radius, groupIcon, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, Radius, TILE_ICON_COLOR, groupIcon, tileBg, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
 import { formatAmount, t } from '@/lib/i18n';
@@ -224,7 +224,7 @@ export default function HomeScreen() {
                   onPress={() => router.push(`/groups/${g.id}`)}
                   style={({ pressed }) => [styles.groupCard, pressed && styles.pressed]}>
                   <View style={[styles.tile, { backgroundColor: tileBg(g.id) }]}>
-                    <Icon name={groupIcon(g.emoji)} size={21} color={Palette.ink} />
+                    <Icon name={groupIcon(g.emoji)} size={21} color={TILE_ICON_COLOR} />
                   </View>
                   <View style={styles.groupInfo}>
                     <Text style={styles.groupName} numberOfLines={1}>

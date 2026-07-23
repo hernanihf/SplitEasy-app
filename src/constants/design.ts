@@ -103,8 +103,13 @@ export function avatarColor(id: number | string): string {
   return AVATAR_COLORS[Math.abs(n) % AVATAR_COLORS.length];
 }
 
-// Soft background tints for group emoji tiles.
+// Soft background tints for group emoji tiles — fixed regardless of theme
+// (unlike ThemeColors), so an icon drawn on top needs a fixed dark color too
+// (TILE_ICON_COLOR below), not Palette.ink — that flips to a near-white in
+// dark mode and disappears against these always-light tints.
 const TILE_BG = ['#E3EEFB', '#E6F2EC', '#FBEAE0', '#F3EDFB', '#FBF0E0', '#E8F5F0'];
+
+export const TILE_ICON_COLOR = '#0F1A16';
 
 export function tileBg(id: number | string): string {
   const n = typeof id === 'number' ? id : hashString(id);

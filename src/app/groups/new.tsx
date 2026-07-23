@@ -5,9 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
 import { CurrencyPicker } from '@/components/currency-picker';
+import { Icon } from '@/components/icon';
 import { ScreenMeta } from '@/components/screen-meta';
 import { DEFAULT_CURRENCY } from '@/constants/currencies';
-import { Font, GROUP_EMOJIS, Radius, type ThemeColors } from '@/constants/design';
+import { Font, GROUP_EMOJIS, Radius, groupIcon, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -55,15 +56,15 @@ export default function NewGroupScreen() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.emojiPreviewWrap}>
             <View style={styles.emojiPreview}>
-              <Text style={styles.emojiBig}>{emoji}</Text>
+              <Icon name={groupIcon(emoji)} size={32} color={Palette.ink} />
             </View>
             <View style={styles.emojiOptions}>
-              {GROUP_EMOJIS.slice(0, 8).map((em) => (
+              {GROUP_EMOJIS.map((em) => (
                 <Pressable
                   key={em}
                   onPress={() => setEmoji(em)}
                   style={[styles.emojiOption, em === emoji && styles.emojiOptionActive]}>
-                  <Text style={styles.emojiOptionChar}>{em}</Text>
+                  <Icon name={groupIcon(em)} size={18} color={Palette.ink} />
                 </Pressable>
               ))}
             </View>
@@ -132,7 +133,6 @@ const makeStyles = (Palette: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emojiBig: { fontSize: 32 },
   emojiOptions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 7, marginTop: 13 },
   emojiOption: {
     width: 38,
@@ -145,7 +145,6 @@ const makeStyles = (Palette: ThemeColors) =>
     borderColor: Palette.cardBorder,
   },
   emojiOptionActive: { backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
-  emojiOptionChar: { fontSize: 18 },
   label: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink, marginBottom: 8, marginLeft: 4 },
   inputCard: {
     backgroundColor: Palette.card,

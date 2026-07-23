@@ -25,7 +25,7 @@ import {
 import { OfflineBanner } from '@/components/offline-banner';
 import { ScreenMeta } from '@/components/screen-meta';
 import { CATEGORIES, categoryColor, categoryIcon } from '@/constants/categories';
-import { Font, Radius, avatarColor, groupIcon, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, Radius, TILE_ICON_COLOR, avatarColor, groupIcon, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { periodCutoff, type PeriodFilter } from '@/lib/date-filter';
 import { formatAmount, i18n, t } from '@/lib/i18n';
@@ -517,7 +517,7 @@ export default function GroupDetailScreen() {
             <Pressable
               onPress={() => setEditingIcon(true)}
               style={[styles.tile, { backgroundColor: tileBg(group.id) }]}>
-              <Icon name={groupIcon(group.emoji)} size={24} color={Palette.ink} />
+              <Icon name={groupIcon(group.emoji)} size={24} color={TILE_ICON_COLOR} />
             </Pressable>
             <View style={{ flex: 1 }}>
               <Pressable onPress={() => setEditingName(true)} style={styles.groupNameWrap}>
