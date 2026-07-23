@@ -7,10 +7,11 @@ import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { CommentsSection, type Comment } from '@/components/comments-section';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { Icon } from '@/components/icon';
 import { ScreenMeta } from '@/components/screen-meta';
-import { categoryEmoji } from '@/constants/categories';
+import { categoryColor, categoryIcon } from '@/constants/categories';
 import { DEFAULT_CURRENCY } from '@/constants/currencies';
-import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, i18n, t } from '@/lib/i18n';
@@ -140,7 +141,8 @@ export default function ExpenseDetailScreen() {
     }
   };
 
-  const emoji = categoryEmoji(expense.category, expense.description);
+  const icon = categoryIcon(expense.category);
+  const iconColor = categoryColor(expense.category);
   const splits = (expense.splits ?? []).filter((s) => s.amount !== 0);
 
   return (
@@ -188,8 +190,8 @@ export default function ExpenseDetailScreen() {
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.hero}>
-            <View style={[styles.heroTile, { backgroundColor: tileBg(expense.description) }]}>
-              <Text style={styles.heroEmoji}>{emoji}</Text>
+            <View style={[styles.heroTile, { backgroundColor: `${iconColor}26` }]}>
+              <Icon name={icon} size={28} color={iconColor} />
             </View>
             <Text style={styles.heroDesc}>{expense.description}</Text>
             <Text style={styles.heroAmount}>{formatAmount(expense.amount, currency)}</Text>
@@ -319,7 +321,6 @@ const makeStyles = (Palette: ThemeColors) =>
       justifyContent: 'center',
       marginBottom: 12,
     },
-    heroEmoji: { fontSize: 30 },
     heroDesc: { fontSize: 18, fontFamily: Font.sansSemibold, color: Palette.ink, marginBottom: 2 },
     heroAmount: { fontSize: 30, fontFamily: Font.monoSemibold, color: Palette.ink, marginVertical: 2 },
     heroMeta: { fontSize: 13, color: Palette.muted2, fontFamily: Font.sans, marginTop: 2 },

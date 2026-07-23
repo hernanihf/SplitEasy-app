@@ -6,9 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
 import { CommentsSection, type Comment } from '@/components/comments-section';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { Icon } from '@/components/icon';
 import { ScreenMeta } from '@/components/screen-meta';
 import { DEFAULT_CURRENCY } from '@/constants/currencies';
-import { Font, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, type ThemeColors } from '@/constants/design';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatAmount, i18n, t } from '@/lib/i18n';
@@ -131,8 +132,8 @@ export default function SettlementDetailScreen() {
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.hero}>
-            <View style={[styles.heroTile, { backgroundColor: tileBg('payment') }]}>
-              <Text style={styles.heroEmoji}>💸</Text>
+            <View style={[styles.heroTile, { backgroundColor: `${Palette.green}26` }]}>
+              <Icon name="cash" size={28} color={Palette.green} />
             </View>
             <Text style={styles.heroDesc}>{t('groupDetail.paidFromTo', { from: fromName, to: toName })}</Text>
             <Text style={styles.heroAmount}>{formatAmount(settlement.amount, currency)}</Text>
@@ -187,7 +188,6 @@ const makeStyles = (Palette: ThemeColors) =>
       justifyContent: 'center',
       marginBottom: 12,
     },
-    heroEmoji: { fontSize: 30 },
     heroDesc: { fontSize: 18, fontFamily: Font.sansSemibold, color: Palette.ink, marginBottom: 2, textAlign: 'center' },
     heroAmount: { fontSize: 30, fontFamily: Font.monoSemibold, color: Palette.green, marginVertical: 2 },
     heroMeta: { fontSize: 13, color: Palette.muted2, fontFamily: Font.sans, marginTop: 2 },

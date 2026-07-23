@@ -24,7 +24,7 @@ import {
 } from '@/components/filter-sheet';
 import { OfflineBanner } from '@/components/offline-banner';
 import { ScreenMeta } from '@/components/screen-meta';
-import { CATEGORIES, categoryEmoji } from '@/constants/categories';
+import { CATEGORIES, categoryColor, categoryIcon } from '@/constants/categories';
 import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { periodCutoff, type PeriodFilter } from '@/lib/date-filter';
@@ -594,11 +594,12 @@ export default function GroupDetailScreen() {
                 {filteredHistory.map((item) => {
                 if (item.kind === 'pending') {
                   const p = item.pending;
-                  const emoji = categoryEmoji(p.payload.category, p.payload.description);
+                  const icon = categoryIcon(p.payload.category);
+                  const color = categoryColor(p.payload.category);
                   return (
                     <View key={`p${p.localId}`} style={styles.expenseCard}>
-                      <View style={[styles.smallAvatar, { backgroundColor: tileBg(p.payload.description) }]}>
-                        <Text style={styles.expenseEmoji}>{emoji}</Text>
+                      <View style={[styles.smallAvatar, { backgroundColor: `${color}26` }]}>
+                        <Icon name={icon} size={18} color={color} />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={styles.expenseDesc} numberOfLines={1}>
@@ -624,8 +625,8 @@ export default function GroupDetailScreen() {
                         })
                       }
                       style={({ pressed }) => [styles.expenseCard, pressed && styles.pressed]}>
-                      <View style={[styles.smallAvatar, { backgroundColor: tileBg('payment') }]}>
-                        <Text style={styles.expenseEmoji}>💸</Text>
+                      <View style={[styles.smallAvatar, { backgroundColor: `${Palette.green}26` }]}>
+                        <Icon name="cash" size={18} color={Palette.green} />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={styles.expenseDesc} numberOfLines={1}>
@@ -679,7 +680,8 @@ export default function GroupDetailScreen() {
                 // When I paid, the useful number is what others owe me (total minus
                 // my own share); otherwise it's what I owe.
                 const lent = ex.amount - myShare;
-                const emoji = categoryEmoji(ex.category, ex.description);
+                const icon = categoryIcon(ex.category);
+                const iconColor = categoryColor(ex.category);
                 // Mirrors the backend's own rule (isPayerOrSplitParticipant):
                 // only the payer or a split participant may delete it. A
                 // deleted expense is never re-deletable, but it does still
@@ -695,8 +697,8 @@ export default function GroupDetailScreen() {
                       })
                     }
                     style={({ pressed }) => [styles.expenseCard, pressed && styles.pressed]}>
-                    <View style={[styles.smallAvatar, { backgroundColor: tileBg(ex.description) }, isDeleted && styles.deletedTile]}>
-                      <Text style={styles.expenseEmoji}>{emoji}</Text>
+                    <View style={[styles.smallAvatar, { backgroundColor: `${iconColor}26` }, isDeleted && styles.deletedTile]}>
+                      <Icon name={icon} size={18} color={iconColor} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={[styles.expenseDesc, isDeleted && styles.deletedText]} numberOfLines={1}>
@@ -987,6 +989,10 @@ const makeStyles = (Palette: ThemeColors) =>
   iconBtn: {
     width: 38,
     height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    backgroundColor: Palette.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1038,7 +1044,6 @@ const makeStyles = (Palette: ThemeColors) =>
     justifyContent: 'center',
   },
   deleteActionText: { color: '#fff', fontSize: 13.5, fontFamily: Font.sansSemibold },
-  expenseEmoji: { fontSize: 19 },
   expenseDesc: { fontSize: 14.5, fontFamily: Font.sansSemibold, color: Palette.ink },
   expenseMeta: { marginTop: 3, fontSize: 12, color: Palette.muted },
   expenseAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink },

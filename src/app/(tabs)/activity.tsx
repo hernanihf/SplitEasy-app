@@ -11,9 +11,10 @@ import {
   FilterSheet,
   type FilterChipOption,
 } from '@/components/filter-sheet';
+import { Icon } from '@/components/icon';
 import { ScreenMeta } from '@/components/screen-meta';
-import { CATEGORIES, categoryEmoji } from '@/constants/categories';
-import { Font, tileBg, type ThemeColors } from '@/constants/design';
+import { CATEGORIES, categoryColor, categoryIcon } from '@/constants/categories';
+import { Font, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { periodCutoff, type PeriodFilter } from '@/lib/date-filter';
 import { formatAmount, i18n, t } from '@/lib/i18n';
@@ -235,10 +236,8 @@ export default function ActivityScreen() {
             {filteredEvents.map((ev, i) => {
               const settlement = ev.type === 'settlement';
               const comment = ev.type === 'comment';
-              const emoji = settlement ? '💸' : comment ? '💬' : categoryEmoji(ev.category, ev.title);
-              // Payments and comments each share a fixed tile colour so they
-              // match the group history / read consistently across rows.
-              const tileKey = settlement ? 'payment' : comment ? 'comment' : ev.title;
+              const iconName = settlement ? 'cash' : comment ? 'message' : categoryIcon(ev.category);
+              const iconColor = settlement ? Palette.green : comment ? Palette.muted : categoryColor(ev.category);
               const key = `${ev.type}-${ev.id}-${i}`;
               return (
                 <Pressable
@@ -248,11 +247,11 @@ export default function ActivityScreen() {
                   <View
                     style={[
                       styles.tile,
-                      { backgroundColor: tileBg(tileKey) },
+                      { backgroundColor: `${iconColor}26` },
                       !ev.is_unread && styles.tileRead,
                       ev.deleted && styles.deletedTile,
                     ]}>
-                    <Text style={styles.tileEmoji}>{emoji}</Text>
+                    <Icon name={iconName} size={18} color={iconColor} />
                   </View>
                   <View style={styles.info}>
                     <Text
@@ -441,7 +440,6 @@ const makeStyles = (Palette: ThemeColors) =>
   },
   rowPressed: { opacity: 0.6 },
   tile: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  tileEmoji: { fontSize: 18 },
   info: { flex: 1, minWidth: 0 },
   rowTitle: { fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
   // Unread rows read at full brightness (bold title); once seen they settle

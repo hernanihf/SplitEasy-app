@@ -1,3 +1,4 @@
+import type { IconName } from '@/components/icon';
 import { expenseEmoji } from '@/constants/design';
 
 // The fixed expense category list, mirroring the backend's
@@ -44,6 +45,40 @@ const COLOR_BY_SLUG: Record<string, string> = Object.fromEntries(
 // grey for anything unrecognized.
 export function categoryColor(slug: string | undefined | null): string {
   return (slug && COLOR_BY_SLUG[slug]) || COLOR_BY_SLUG.other;
+}
+
+// One line icon per slug (same order as CATEGORIES), for tiles that render
+// the new Icon component instead of the emoji above.
+const ICON_BY_SLUG: Record<CategorySlug, IconName> = {
+  food: 'fork',
+  groceries: 'cart',
+  coffee: 'coffee',
+  drinks: 'drink',
+  transport: 'car',
+  fuel: 'fuel',
+  travel: 'plane',
+  accommodation: 'bed',
+  housing: 'home',
+  utilities: 'bulb',
+  internet: 'wifi',
+  entertainment: 'clapper',
+  sports: 'ball',
+  shopping: 'bag',
+  health: 'health',
+  education: 'cap',
+  gifts: 'gift',
+  pets: 'paw',
+  household: 'broom',
+  other: 'dots',
+};
+
+// The icon for a category tile, falling back to "other" for anything
+// unrecognized (including the legacy no-category case categoryEmoji's
+// keyword guess used to cover — that guess only mattered for pre-migration
+// data, and losing that extra nuance is an acceptable trade for one
+// consistent icon set instead of two overlapping ones).
+export function categoryIcon(slug: string | undefined | null): IconName {
+  return (slug && ICON_BY_SLUG[slug as CategorySlug]) || ICON_BY_SLUG.other;
 }
 
 // The icon for an expense: its category's emoji when it has a meaningful
