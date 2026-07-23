@@ -32,7 +32,12 @@
       "bundler": "metro"
     },
     "plugins": [
-      ["expo-router", { "sitemap": false }],
+      [
+        "expo-router",
+        {
+          "sitemap": false
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -53,7 +58,8 @@
         }
       ],
       "expo-localization",
-      "expo-font"
+      "expo-font",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

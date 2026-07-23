@@ -1,4 +1,6 @@
+import { File, Paths } from 'expo-file-system';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -362,10 +364,10 @@ export default function GroupDetailScreen() {
         a.remove();
         URL.revokeObjectURL(url);
       } else {
-        // No file-system/share-sheet dependency in this app yet — sharing
-        // the CSV text directly still gets the data off the device (AirDrop,
-        // email, Notes, etc.) even without a real file attachment.
-        await Share.share({ message: await blob.text(), title: filename });
+        const file = new File(Paths.cache, filename);
+        file.create({ overwrite: true });
+        file.write(await blob.text());
+        await Sharing.shareAsync(file.uri, { mimeType: 'text/csv', dialogTitle: filename });
       }
     } catch {
       setErrorMsg(t('groupDetail.exportError'));
