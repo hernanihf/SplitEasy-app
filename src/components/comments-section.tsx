@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 
 import { Avatar } from '@/components/avatar';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { Icon } from '@/components/icon';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
 import { i18n, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -117,7 +118,7 @@ export function CommentsSection({ comments, loading, loadError, myId, onAdd, onD
             </View>
             {!readOnly && myId === c.user.id && (
               <Pressable onPress={() => setDeletingID(c.id)} hitSlop={8} style={styles.deleteBtn}>
-                <Text style={styles.deleteBtnText}>✕</Text>
+                <Icon name="x" size={13} color={Palette.muted} />
               </Pressable>
             )}
           </View>
@@ -189,7 +190,6 @@ const makeStyles = (Palette: ThemeColors) =>
       justifyContent: 'center',
       marginTop: 2,
     },
-    deleteBtnText: { fontSize: 12, color: Palette.muted, fontFamily: Font.sansSemibold },
     composer: {
       flexDirection: 'row',
       alignItems: 'flex-end',

@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Dimensions, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ChevronIcon } from '@/components/chevron-icon';
+import { Icon } from '@/components/icon';
 import { CATEGORIES } from '@/constants/categories';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { t } from '@/lib/i18n';
@@ -97,7 +98,7 @@ export function CategoryPicker({ value, onChange }: Props) {
                     <Text style={[styles.rowLabel, active && styles.labelActive]}>
                       {t(`categories.${c.slug}`)}
                     </Text>
-                    {active && <Text style={styles.check}>✓</Text>}
+                    {active && <Icon name="check" size={14} color={Palette.green} />}
                   </Pressable>
                 );
               })}
@@ -144,5 +145,4 @@ const makeStyles = (Palette: ThemeColors) =>
     },
     rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Palette.cardBorder },
     rowLabel: { flex: 1, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
-    check: { fontSize: 14, fontFamily: Font.sansBold, color: Palette.green },
   });

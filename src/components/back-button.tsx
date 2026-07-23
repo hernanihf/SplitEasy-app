@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 
+import { Icon } from '@/components/icon';
 import { useColors } from '@/lib/settings';
 
 // Circular back button with a crisp, optically-centred SVG chevron. Replaces a
@@ -14,16 +14,7 @@ export function BackButton({ onPress, style }: { onPress: () => void; style?: Vi
       accessibilityRole="button"
       accessibilityLabel="Back"
       style={[styles.btn, { backgroundColor: Palette.card, borderColor: Palette.cardBorder }, style]}>
-      <Svg width={20} height={20} viewBox="0 0 24 24">
-        <Path
-          d="M14.5 6 L8.5 12 L14.5 18"
-          stroke={Palette.ink}
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      </Svg>
+      <Icon name="chevron-left" size={20} color={Palette.ink} />
     </Pressable>
   );
 }

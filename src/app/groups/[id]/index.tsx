@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CategoryChart } from '@/components/category-chart';
 import { EditGroupIconModal } from '@/components/edit-group-icon-modal';
 import { EditGroupNameModal } from '@/components/edit-group-name-modal';
+import { Icon } from '@/components/icon';
 import {
   FilterBadgeButton,
   FilterChipRow,
@@ -494,7 +495,7 @@ export default function GroupDetailScreen() {
               {exportingCsv ? (
                 <ActivityIndicator color={Palette.ink} size="small" />
               ) : (
-                <Text style={styles.shareGlyph}>⬇️</Text>
+                <Icon name="download" size={20} color={Palette.ink} />
               )}
             </Pressable>
             <Pressable
@@ -502,9 +503,9 @@ export default function GroupDetailScreen() {
               style={styles.iconBtn}
               accessibilityLabel={t('groupDetail.copyLink')}>
               {copied ? (
-                <Text style={styles.copiedTick}>✓</Text>
+                <Icon name="check" size={20} color={Palette.green} />
               ) : (
-                <Text style={styles.shareGlyph}>🔗</Text>
+                <Icon name="copy" size={20} color={Palette.ink} />
               )}
             </Pressable>
           </View>
@@ -989,8 +990,6 @@ const makeStyles = (Palette: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shareGlyph: { fontSize: 16 },
-  copiedTick: { color: Palette.green, fontSize: 18, fontFamily: Font.sansBold, lineHeight: 20 },
   scroll: { paddingTop: 14, paddingBottom: 110 },
   groupHead: { paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', gap: 13 },
   tile: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },

@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { Icon, type IconName } from '@/components/icon';
 import { ScreenMeta } from '@/components/screen-meta';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
@@ -25,7 +26,7 @@ type Me = {
 type PushCategoryField = 'push_expenses_enabled' | 'push_payments_enabled' | 'push_comments_enabled';
 
 const THEME_CYCLE: ThemePref[] = ['system', 'light', 'dark'];
-const THEME_GLYPH: Record<ThemePref, string> = { system: '🌓', light: '☀️', dark: '🌙' };
+const THEME_ICON: Record<ThemePref, IconName> = { system: 'contrast', light: 'sun', dark: 'moon' };
 
 export default function ProfileScreen() {
   const { api, signOut } = useAuth();
@@ -128,7 +129,7 @@ export default function ProfileScreen() {
               onPress={() => setLanguage(language === 'es' ? 'en' : 'es')}
               style={({ pressed }) => [styles.settingRow, pressed && styles.rowPressed]}>
               <View style={[styles.glyphBox, { backgroundColor: Palette.greenTint }]}>
-                <Text style={styles.glyph}>🌐</Text>
+                <Icon name="world" size={16} color={Palette.green} />
               </View>
               <Text style={styles.settingLabel}>{t('profile.language')}</Text>
               <Text style={styles.settingValue}>{language === 'es' ? 'Español' : 'English'}</Text>
@@ -142,7 +143,7 @@ export default function ProfileScreen() {
               onPress={cycleTheme}
               style={({ pressed }) => [styles.settingRow, pressed && styles.rowPressed]}>
               <View style={[styles.glyphBox, { backgroundColor: Palette.inputBg }]}>
-                <Text style={styles.glyph}>{THEME_GLYPH[themePref]}</Text>
+                <Icon name={THEME_ICON[themePref]} size={16} color={Palette.ink} />
               </View>
               <Text style={styles.settingLabel}>{t('profile.appearance')}</Text>
               <Text style={styles.settingValue}>{t(`theme.${themePref}`)}</Text>
@@ -156,7 +157,7 @@ export default function ProfileScreen() {
                 {/* Notifications */}
                 <View style={styles.settingRow}>
                   <View style={[styles.glyphBox, { backgroundColor: Palette.greenTint }]}>
-                    <Text style={styles.glyph}>🔔</Text>
+                    <Icon name="bell" size={16} color={Palette.green} />
                   </View>
                   <Text style={styles.settingLabel}>{t('profile.notifications')}</Text>
                   <Switch
@@ -271,7 +272,6 @@ const makeStyles = (Palette: ThemeColors) =>
     subRowDivider: { marginLeft: 58 },
     subRowLabel: { flex: 1, fontSize: 13.5, color: Palette.muted2, fontFamily: Font.sansMedium },
     glyphBox: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-    glyph: { fontSize: 14 },
     settingLabel: { flex: 1, fontSize: 14.5, color: Palette.ink, fontFamily: Font.sansMedium },
     settingValue: { fontSize: 13.5, color: Palette.muted, fontFamily: Font.sansMedium },
     chevron: { fontSize: 16, color: Palette.faint },
