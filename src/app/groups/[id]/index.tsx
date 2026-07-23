@@ -25,7 +25,7 @@ import {
 import { OfflineBanner } from '@/components/offline-banner';
 import { ScreenMeta } from '@/components/screen-meta';
 import { CATEGORIES, categoryColor, categoryIcon } from '@/constants/categories';
-import { Font, Radius, avatarColor, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, Radius, avatarColor, groupIcon, tileBg, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { periodCutoff, type PeriodFilter } from '@/lib/date-filter';
 import { formatAmount, i18n, t } from '@/lib/i18n';
@@ -517,7 +517,7 @@ export default function GroupDetailScreen() {
             <Pressable
               onPress={() => setEditingIcon(true)}
               style={[styles.tile, { backgroundColor: tileBg(group.id) }]}>
-              <Text style={styles.tileEmoji}>{group.emoji || '💸'}</Text>
+              <Icon name={groupIcon(group.emoji)} size={24} color={Palette.ink} />
             </Pressable>
             <View style={{ flex: 1 }}>
               <Pressable onPress={() => setEditingName(true)} style={styles.groupNameWrap}>
@@ -995,7 +995,6 @@ const makeStyles = (Palette: ThemeColors) =>
   scroll: { paddingTop: 14, paddingBottom: 110 },
   groupHead: { paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', gap: 13 },
   tile: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  tileEmoji: { fontSize: 24 },
   groupNameWrap: { alignSelf: 'flex-start' },
   groupName: { fontSize: 22, fontFamily: Font.sansBold, letterSpacing: -0.5, color: Palette.ink },
   groupMeta: { marginTop: 3, fontSize: 12.5, color: Palette.muted },

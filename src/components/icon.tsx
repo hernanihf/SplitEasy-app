@@ -41,7 +41,19 @@ export type IconName =
   | 'broom'
   | 'dots'
   | 'cash'
-  | 'message';
+  | 'message'
+  // Group icons — one per GROUP_EMOJIS entry (design.ts's groupIcon() maps
+  // the stored emoji to these; several reuse the category icons above).
+  | 'mountain'
+  | 'fire'
+  | 'party'
+  | 'beach'
+  | 'heart'
+  | 'briefcase'
+  | 'book'
+  | 'camera'
+  | 'tent'
+  | 'bike';
 
 type Props = {
   name: IconName;
@@ -153,7 +165,10 @@ export function Icon({ name, size = 20, color, strokeWidth = 2 }: Props) {
       {name === 'ball' && (
         <>
           <Circle cx="12" cy="12" r="8" {...common} />
-          <Path d="M12 6V10L15.5 12.5L14 16.5H10L8.5 12.5L12 10" {...common} />
+          <Path
+            d="M12 8.5L15.33 10.92L14.06 14.83L9.94 14.83L8.67 10.92Z M12 8.5L12 5M15.33 10.92L18.5 9.5M14.06 14.83L15.8 18M9.94 14.83L8.2 18M8.67 10.92L5.5 9.5"
+            {...common}
+          />
         </>
       )}
       {name === 'bag' && <Path d="M6 8H18L17 21H7L6 8Z M9 8V6A3 3 0 0 1 15 6V8" {...common} />}
@@ -204,6 +219,43 @@ export function Icon({ name, size = 20, color, strokeWidth = 2 }: Props) {
       )}
       {name === 'message' && (
         <Path d="M4 6A2 2 0 0 1 6 4H18A2 2 0 0 1 20 6V15A2 2 0 0 1 18 17H9L4 21V6Z" {...common} />
+      )}
+      {name === 'mountain' && <Path d="M2 19L8 6L12 12L16 6L22 19Z" {...common} />}
+      {name === 'fire' && (
+        <Path
+          d="M12 2C10 6 7 8 7 12a5 5 0 0 0 10 0c0-3-2-4-2-4c0 2-1 2-1 0c0-2-1-4-2-6Z"
+          {...common}
+        />
+      )}
+      {name === 'party' && <Path d="M12 2L14 10L22 12L14 14L12 22L10 14L2 12L10 10Z" {...common} />}
+      {name === 'beach' && <Path d="M4 12A8 6 0 0 1 20 12Z M12 12V21M8 21H16" {...common} />}
+      {name === 'heart' && (
+        <Path d="M12 21C12 21 4 14 4 8.5A4.5 4.5 0 0 1 12 6A4.5 4.5 0 0 1 20 8.5C20 14 12 21 12 21Z" {...common} />
+      )}
+      {name === 'briefcase' && (
+        <>
+          <Rect x="3" y="8" width="18" height="11" rx="1.5" {...common} />
+          <Path d="M9 8V6.5A2 2 0 0 1 11 4.5H13A2 2 0 0 1 15 6.5V8" {...common} />
+          <Path d="M3 13H21" {...common} />
+        </>
+      )}
+      {name === 'book' && (
+        <Path d="M12 5C10 4 6 4 3 5V19C6 18 10 18 12 19C14 18 18 18 21 19V5C18 4 14 4 12 5Z M12 5V19" {...common} />
+      )}
+      {name === 'camera' && (
+        <>
+          <Rect x="3" y="8" width="18" height="12" rx="2" {...common} />
+          <Path d="M8.5 8L10 5H14L15.5 8" {...common} />
+          <Circle cx="12" cy="14" r="3.8" {...common} />
+        </>
+      )}
+      {name === 'tent' && <Path d="M3 20L12 5L21 20M9 20L12 15L15 20" {...common} />}
+      {name === 'bike' && (
+        <>
+          <Circle cx="6" cy="17" r="3.2" {...common} />
+          <Circle cx="18" cy="17" r="3.2" {...common} />
+          <Path d="M6 17L10 8H13L18 17M10 8L13.5 13H18" {...common} />
+        </>
       )}
     </Svg>
   );

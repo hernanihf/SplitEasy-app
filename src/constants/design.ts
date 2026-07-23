@@ -1,5 +1,7 @@
 // Design tokens derived from the SplitEasy design (SplitEasy.dc.html).
 
+import type { IconName } from '@/components/icon';
+
 export type ThemeColors = {
   green: string;
   greenDark: string;
@@ -123,7 +125,41 @@ function hashString(s: string): number {
   return h;
 }
 
-export const GROUP_EMOJIS = ['🏔️', '🏠', '🔥', '✈️', '🍽️', '🎉', '⚽', '🏖️', '🚗', '💸'];
+export const GROUP_EMOJIS = [
+  '🏔️', '🏠', '🔥', '✈️', '🍽️', '🎉', '⚽', '🏖️', '🚗', '💸',
+  '❤️', '🎁', '🍸', '🐾', '💼', '📚', '📷', '⛺', '🚲',
+];
+
+// Each group emoji's line-icon equivalent, for tiles that render the shared
+// Icon component instead of the emoji glyph directly (same "one owned icon
+// set instead of mixed emoji" reasoning as every other icon in the app).
+// Keyed by the emoji itself — not a separate stored value — so groups picked
+// before this existed keep rendering correctly with no migration.
+const GROUP_ICON_BY_EMOJI: Record<string, IconName> = {
+  '🏔️': 'mountain',
+  '🏠': 'home',
+  '🔥': 'fire',
+  '✈️': 'plane',
+  '🍽️': 'fork',
+  '🎉': 'party',
+  '⚽': 'ball',
+  '🏖️': 'beach',
+  '🚗': 'car',
+  '💸': 'cash',
+  '❤️': 'heart',
+  '🎁': 'gift',
+  '🍸': 'drink',
+  '🐾': 'paw',
+  '💼': 'briefcase',
+  '📚': 'book',
+  '📷': 'camera',
+  '⛺': 'tent',
+  '🚲': 'bike',
+};
+
+export function groupIcon(emoji: string | undefined | null): IconName {
+  return (emoji && GROUP_ICON_BY_EMOJI[emoji]) || 'cash';
+}
 
 // A generic "expense" icon, used when a description doesn't match any keyword.
 export const DEFAULT_EXPENSE_EMOJI = '🧾';

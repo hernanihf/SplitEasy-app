@@ -4,8 +4,9 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
+import { Icon } from '@/components/icon';
 import { ScreenMeta } from '@/components/screen-meta';
-import { Font, Radius, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, Radius, groupIcon, tileBg, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -75,7 +76,7 @@ export default function JoinScreen() {
         ) : (
           <View style={styles.center}>
             <View style={[styles.tile, { backgroundColor: tileBg(preview.name) }]}>
-              <Text style={styles.tileEmoji}>{preview.emoji || '💸'}</Text>
+              <Icon name={groupIcon(preview.emoji)} size={34} color={Palette.ink} />
             </View>
             <Text style={styles.groupName}>{preview.name}</Text>
             <Text style={styles.meta}>
@@ -111,7 +112,6 @@ const makeStyles = (Palette: ThemeColors) =>
     backBtn: { position: 'absolute', top: 8, left: 0 },
     errorText: { color: Palette.red, fontSize: 15, fontFamily: Font.sans, textAlign: 'center' },
     tile: { width: 76, height: 76, borderRadius: Radius.xl, alignItems: 'center', justifyContent: 'center' },
-    tileEmoji: { fontSize: 34 },
     groupName: {
       marginTop: 18,
       fontSize: 22,

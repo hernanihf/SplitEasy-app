@@ -7,10 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppLoading } from '@/components/app-loading';
 import { Avatar } from '@/components/avatar';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { Icon } from '@/components/icon';
 import { InstallPrompt } from '@/components/install-prompt';
 import { OfflineBanner } from '@/components/offline-banner';
 import { ScreenMeta } from '@/components/screen-meta';
-import { Font, Radius, tileBg, type ThemeColors } from '@/constants/design';
+import { Font, Radius, groupIcon, tileBg, type ThemeColors } from '@/constants/design';
 import { PENDING_INVITE_KEY, useAuth } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
 import { formatAmount, t } from '@/lib/i18n';
@@ -223,7 +224,7 @@ export default function HomeScreen() {
                   onPress={() => router.push(`/groups/${g.id}`)}
                   style={({ pressed }) => [styles.groupCard, pressed && styles.pressed]}>
                   <View style={[styles.tile, { backgroundColor: tileBg(g.id) }]}>
-                    <Text style={styles.tileEmoji}>{g.emoji || '💸'}</Text>
+                    <Icon name={groupIcon(g.emoji)} size={21} color={Palette.ink} />
                   </View>
                   <View style={styles.groupInfo}>
                     <Text style={styles.groupName} numberOfLines={1}>
@@ -359,7 +360,6 @@ const makeStyles = (Palette: ThemeColors) =>
   },
   pressed: { opacity: 0.7 },
   tile: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  tileEmoji: { fontSize: 21 },
   groupInfo: { flex: 1, minWidth: 0 },
   groupName: { fontSize: 15.5, fontFamily: Font.sansSemibold, color: Palette.ink },
   groupMeta: { marginTop: 3, fontSize: 12.5, color: Palette.muted },

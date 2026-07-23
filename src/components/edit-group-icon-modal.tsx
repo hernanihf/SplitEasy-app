@@ -1,6 +1,7 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Font, GROUP_EMOJIS, Radius, type ThemeColors } from '@/constants/design';
+import { Icon } from '@/components/icon';
+import { Font, GROUP_EMOJIS, Radius, groupIcon, type ThemeColors } from '@/constants/design';
 import { t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
 
@@ -27,7 +28,7 @@ export function EditGroupIconModal({ visible, currentEmoji, onSelect, onCancel }
                 key={em}
                 onPress={() => onSelect(em)}
                 style={[styles.option, em === currentEmoji && styles.optionActive]}>
-                <Text style={styles.optionChar}>{em}</Text>
+                <Icon name={groupIcon(em)} size={20} color={Palette.ink} />
               </Pressable>
             ))}
           </View>
@@ -66,7 +67,6 @@ const makeStyles = (Palette: ThemeColors) =>
       borderColor: Palette.cardBorder,
     },
     optionActive: { backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
-    optionChar: { fontSize: 21 },
     cancelBtn: {
       height: 46,
       borderRadius: 13,

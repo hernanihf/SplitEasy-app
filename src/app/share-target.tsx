@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Font, Radius, type ThemeColors } from '@/constants/design';
+import { Icon } from '@/components/icon';
+import { Font, Radius, groupIcon, type ThemeColors } from '@/constants/design';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { getLastGroupId, rememberLastGroup } from '@/lib/last-group';
@@ -131,7 +132,7 @@ export default function ShareTargetScreen() {
             <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
               {groups.map((g) => (
                 <Pressable key={g.id} onPress={() => chooseGroup(g)} style={styles.groupRow}>
-                  <Text style={styles.groupEmoji}>{g.emoji}</Text>
+                  <Icon name={groupIcon(g.emoji)} size={22} color={Palette.ink} />
                   <Text style={styles.groupName}>{g.name}</Text>
                 </Pressable>
               ))}
@@ -171,6 +172,5 @@ const makeStyles = (Palette: ThemeColors) =>
       borderRadius: Radius.lg,
       backgroundColor: Palette.card,
     },
-    groupEmoji: { fontSize: 22 },
     groupName: { fontSize: 16, fontFamily: Font.sansSemibold, color: Palette.ink },
   });
