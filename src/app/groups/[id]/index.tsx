@@ -989,10 +989,6 @@ const makeStyles = (Palette: ThemeColors) =>
   iconBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: Palette.cardBorder,
-    backgroundColor: Palette.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
