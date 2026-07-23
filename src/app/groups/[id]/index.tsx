@@ -135,6 +135,7 @@ export default function GroupDetailScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [exportingCsv, setExportingCsv] = useState(false);
   const [deletingSettlementId, setDeletingSettlementId] = useState<number | null>(null);
   const [deletingSettlement, setDeletingSettlement] = useState(false);
   const [deletingExpenseId, setDeletingExpenseId] = useState<number | null>(null);
@@ -346,6 +347,33 @@ export default function GroupDetailScreen() {
     }
   }, [api, id, inviteUrl]);
 
+  const handleExportCsv = useCallback(async () => {
+    if (exportingCsv) return;
+    setExportingCsv(true);
+    try {
+      const { blob, filename } = await api.getBlob(`/api/v1/groups/${id}/export.csv`);
+      if (Platform.OS === 'web') {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } else {
+        // No file-system/share-sheet dependency in this app yet — sharing
+        // the CSV text directly still gets the data off the device (AirDrop,
+        // email, Notes, etc.) even without a real file attachment.
+        await Share.share({ message: await blob.text(), title: filename });
+      }
+    } catch {
+      setErrorMsg(t('groupDetail.exportError'));
+    } finally {
+      setExportingCsv(false);
+    }
+  }, [api, id, exportingCsv]);
+
   const confirmDeleteSettlement = useCallback(async () => {
     if (deletingSettlementId == null || deletingSettlement) return;
     setDeletingSettlement(true);
@@ -456,6 +484,17 @@ export default function GroupDetailScreen() {
         <View style={styles.topbar}>
           <BackButton onPress={() => router.back()} />
           <View style={styles.topActions}>
+            <Pressable
+              onPress={handleExportCsv}
+              disabled={exportingCsv}
+              style={styles.iconBtn}
+              accessibilityLabel={t('groupDetail.exportCsv')}>
+              {exportingCsv ? (
+                <ActivityIndicator color={Palette.ink} size="small" />
+              ) : (
+                <Text style={styles.shareGlyph}>⬇️</Text>
+              )}
+            </Pressable>
             <Pressable
               onPress={handleShare}
               style={styles.iconBtn}

@@ -92,6 +92,37 @@ export function createApiClient(
     return (await response.json()) as T;
   }
 
+  // getBlob fetches a non-JSON response (e.g. a CSV export) — same
+  // auth/refresh handling as request, but reads the body as a Blob and
+  // pulls the server-suggested filename off Content-Disposition instead of
+  // decoding JSON.
+  async function getBlob(path: string, tokenOverride?: string): Promise<{ blob: Blob; filename: string }> {
+    const token = tokenOverride ?? getToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_URL}${path}`, { headers });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        if (tokenOverride === undefined) {
+          const newToken = await refreshAccessToken();
+          if (newToken) {
+            return getBlob(path, newToken);
+          }
+        }
+        onUnauthorized?.();
+      }
+      const text = await response.text();
+      throw new ApiError(response.status, text || response.statusText);
+    }
+
+    const match = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '');
+    return { blob: await response.blob(), filename: match?.[1] ?? 'export.csv' };
+  }
+
   return {
     get: <T>(path: string) => request<T>(path),
     post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body }),
@@ -99,5 +130,6 @@ export function createApiClient(
     patch: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PATCH', body }),
     delete: <T>(path: string, body?: unknown) => request<T>(path, { method: 'DELETE', body }),
     postFormData: <T>(path: string, formData: FormData) => postFormData<T>(path, formData),
+    getBlob: (path: string) => getBlob(path),
   };
 }
