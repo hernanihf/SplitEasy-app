@@ -95,7 +95,12 @@ export function Icon({ name, size = 20, color, strokeWidth = 2 }: Props) {
           <Path d="M12 4a8 8 0 0 1 0 16Z" fill={color} stroke="none" />
         </>
       )}
-      {name === 'fork' && <Path d="M6 3V8M8 3V8M10 3V8M6 8Q8 10.5 10 8M8 8.5V21" {...common} />}
+      {name === 'fork' && (
+        <>
+          <Path d="M5 3V8L7 11M9 3V8L7 11M7 3V11M7 11V21" {...common} />
+          <Path d="M15 3C15 3 20 6.5 20 10C20 11.5 18.8 12.5 17.3 13L15 13.5Z M17 13V21" {...common} />
+        </>
+      )}
       {name === 'cart' && (
         <>
           <Path d="M3 4H5L7.5 14.5A2 2 0 0 0 9.4 16H17A2 2 0 0 0 18.9 14.5L20.5 7H6" {...common} />
