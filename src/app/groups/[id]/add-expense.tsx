@@ -372,12 +372,14 @@ export default function AddExpenseScreen() {
               </View>
             ) : (
               <View style={styles.scanRow}>
-                <Pressable onPress={scanFromCamera} style={styles.scanBtn}>
+                <Pressable onPress={scanFromCamera} style={[styles.scanBtn, styles.scanBtnRow]}>
+                  <Icon name="camera" size={16} color={Palette.ink} />
                   <Text style={styles.scanBtnText}>{t('addExpense.scan')}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => router.push(`/groups/${id}/scan-receipt`)}
-                  style={styles.scanBtn}>
+                  style={[styles.scanBtn, styles.scanBtnRow]}>
+                  <Icon name="upload" size={16} color={Palette.ink} />
                   <Text style={styles.scanBtnText}>{t('addExpense.upload')}</Text>
                 </Pressable>
               </View>
@@ -582,6 +584,7 @@ const makeStyles = (Palette: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
+  scanBtnRow: { flexDirection: 'row', gap: 7 },
   scanBtnText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.ink },
   scanError: { color: Palette.red, fontSize: 12.5, marginTop: 10 },
   scannedRow: { flexDirection: 'row', alignItems: 'center', gap: 13 },

@@ -3,7 +3,7 @@ import { Dimensions, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, V
 
 import { ChevronIcon } from '@/components/chevron-icon';
 import { Icon } from '@/components/icon';
-import { CATEGORIES } from '@/constants/categories';
+import { CATEGORIES, categoryColor, categoryIcon } from '@/constants/categories';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
 import { t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -74,7 +74,7 @@ export function CategoryPicker({ value, onChange }: Props) {
   return (
     <View ref={triggerRef} collapsable={false}>
       <Pressable onPress={open} style={[styles.chip, styles.chipActive, styles.chipCollapsed]}>
-        <Text style={styles.emoji}>{current.emoji}</Text>
+        <Icon name={categoryIcon(current.slug)} size={15} color={categoryColor(current.slug)} />
         <Text style={[styles.label, styles.labelActive]}>{t(`categories.${current.slug}`)}</Text>
         <ChevronIcon color={Palette.greenDark} />
       </Pressable>
@@ -94,7 +94,7 @@ export function CategoryPicker({ value, onChange }: Props) {
                       close();
                     }}
                     style={[styles.row, i < CATEGORIES.length - 1 && styles.rowDivider]}>
-                    <Text style={styles.emoji}>{c.emoji}</Text>
+                    <Icon name={categoryIcon(c.slug)} size={16} color={categoryColor(c.slug)} />
                     <Text style={[styles.rowLabel, active && styles.labelActive]}>
                       {t(`categories.${c.slug}`)}
                     </Text>
@@ -124,7 +124,6 @@ const makeStyles = (Palette: ThemeColors) =>
     },
     chipActive: { backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
     chipCollapsed: { alignSelf: 'flex-start' },
-    emoji: { fontSize: 14 },
     label: { fontSize: 13.5, fontFamily: Font.sansMedium, color: Palette.ink },
     labelActive: { color: Palette.greenDark },
     dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
