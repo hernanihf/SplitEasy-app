@@ -204,7 +204,6 @@ export default function ExpenseDetailScreen() {
             <Pressable
               onPress={() => Linking.openURL(receiptImageUrl)}
               style={styles.receiptRow}>
-              <Text style={styles.receiptRowIcon}>🧾</Text>
               <Text style={styles.receiptRowText}>{t('expenseDetail.viewReceipt')}</Text>
             </Pressable>
           )}
@@ -336,7 +335,6 @@ const makeStyles = (Palette: ThemeColors) =>
       borderColor: Palette.cardBorder,
       marginBottom: 6,
     },
-    receiptRowIcon: { fontSize: 15 },
     receiptRowText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.ink },
     sectionLabel: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.ink, marginTop: 16, marginBottom: 8 },
     card: {
