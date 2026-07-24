@@ -69,7 +69,7 @@ const ICON_BY_SLUG: Record<CategorySlug, IconName> = {
   gifts: 'gift',
   pets: 'paw',
   household: 'broom',
-  other: 'dots',
+  other: 'question',
 };
 
 // The icon for a category tile, falling back to "other" for anything

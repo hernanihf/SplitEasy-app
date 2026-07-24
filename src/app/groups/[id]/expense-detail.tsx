@@ -159,14 +159,14 @@ export default function ExpenseDetailScreen() {
                 hitSlop={8}
                 accessibilityLabel={t('common.edit')}
                 style={styles.topAction}>
-                <Text style={styles.topActionIcon}>✏️</Text>
+                <Icon name="edit" size={17} color={Palette.ink} />
               </Pressable>
               <Pressable
                 onPress={() => setConfirmingDelete(true)}
                 hitSlop={8}
                 accessibilityLabel={t('common.delete')}
                 style={styles.topAction}>
-                <Text style={styles.topActionIcon}>🗑️</Text>
+                <Icon name="trash" size={17} color={Palette.ink} />
               </Pressable>
             </View>
           ) : (
@@ -297,7 +297,6 @@ const makeStyles = (Palette: ThemeColors) =>
     topTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
     topActions: { flexDirection: 'row', gap: 6 },
     topAction: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-    topActionIcon: { fontSize: 16 },
     error: { color: Palette.red, fontSize: 13, marginTop: 4, marginBottom: 4, marginHorizontal: 20 },
     deletedBanner: {
       marginHorizontal: 20,

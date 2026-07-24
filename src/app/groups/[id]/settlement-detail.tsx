@@ -121,7 +121,7 @@ export default function SettlementDetailScreen() {
               hitSlop={8}
               accessibilityLabel={t('common.delete')}
               style={styles.topAction}>
-              <Text style={styles.topActionIcon}>🗑️</Text>
+              <Icon name="trash" size={17} color={Palette.ink} />
             </Pressable>
           ) : (
             <View style={{ width: 38 }} />
@@ -176,7 +176,6 @@ const makeStyles = (Palette: ThemeColors) =>
     },
     topTitle: { fontSize: 15, fontFamily: Font.sansSemibold, color: Palette.ink },
     topAction: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-    topActionIcon: { fontSize: 16 },
     error: { color: Palette.red, fontSize: 13, marginTop: 4, marginBottom: 4, marginHorizontal: 20 },
     scroll: { paddingHorizontal: 20, paddingBottom: 28 },
     hero: { alignItems: 'center', paddingVertical: 18 },

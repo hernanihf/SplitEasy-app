@@ -11,6 +11,8 @@ export type IconName =
   | 'chevron-left'
   | 'download'
   | 'share'
+  | 'edit'
+  | 'trash'
   | 'x'
   | 'check'
   | 'world'
@@ -39,7 +41,7 @@ export type IconName =
   | 'gift'
   | 'paw'
   | 'broom'
-  | 'dots'
+  | 'question'
   | 'cash'
   | 'message'
   // Group icons — one per GROUP_EMOJIS entry (design.ts's groupIcon() maps
@@ -80,6 +82,15 @@ export function Icon({ name, size = 20, color, strokeWidth = 2 }: Props) {
           <Circle cx="6" cy="12" r="2.5" fill={color} stroke="none" />
           <Circle cx="18" cy="6" r="2.5" fill={color} stroke="none" />
           <Circle cx="18" cy="18" r="2.5" fill={color} stroke="none" />
+        </>
+      )}
+      {name === 'edit' && <Path d="M17 3L21 7L9 19L4 20L5 15L17 3Z" {...common} />}
+      {name === 'trash' && (
+        <>
+          <Path d="M4 7H20" {...common} />
+          <Path d="M9 7V5A1 1 0 0 1 10 4H14A1 1 0 0 1 15 5V7" {...common} />
+          <Path d="M6 7L7 20A1 1 0 0 0 8 21H16A1 1 0 0 0 17 20L18 7" {...common} />
+          <Path d="M10 11V17M14 11V17" {...common} />
         </>
       )}
       {name === 'x' && <Path d="M6 6L18 18M18 6L6 18" {...common} />}
@@ -132,9 +143,10 @@ export function Icon({ name, size = 20, color, strokeWidth = 2 }: Props) {
       {name === 'drink' && <Path d="M4 4H20L12 13Z M12 13V19M8 21H16" {...common} />}
       {name === 'car' && (
         <>
-          <Path d="M4 16L5.5 10.5A2 2 0 0 1 7.4 9H16.6A2 2 0 0 1 18.5 10.5L20 16M3 16H21" {...common} />
-          <Circle cx="7.5" cy="17.3" r="1.5" {...common} />
-          <Circle cx="16.5" cy="17.3" r="1.5" {...common} />
+          <Path d="M6 11L8 6.5A1 1 0 0 1 8.9 6H15.1A1 1 0 0 1 16 6.5L18 11" {...common} />
+          <Path d="M3 16V12A1 1 0 0 1 4 11H20A1 1 0 0 1 21 12V16H3Z" {...common} />
+          <Circle cx="7.5" cy="17" r="1.6" {...common} />
+          <Circle cx="16.5" cy="17" r="1.6" {...common} />
         </>
       )}
       {name === 'fuel' && (
@@ -206,11 +218,10 @@ export function Icon({ name, size = 20, color, strokeWidth = 2 }: Props) {
       {name === 'broom' && (
         <Path d="M15 3L9 15M9 15L4 21M9 15L6 22M9 15L9 22M9 15L12 22M9 15L14 21" {...common} />
       )}
-      {name === 'dots' && (
+      {name === 'question' && (
         <>
-          <Circle cx="7" cy="12" r="1.8" fill={color} stroke="none" />
-          <Circle cx="12" cy="12" r="1.8" fill={color} stroke="none" />
-          <Circle cx="17" cy="12" r="1.8" fill={color} stroke="none" />
+          <Path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" {...common} />
+          <Circle cx="12" cy="17" r="1.1" fill={color} stroke="none" />
         </>
       )}
       {name === 'cash' && (
