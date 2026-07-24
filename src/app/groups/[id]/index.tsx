@@ -338,12 +338,24 @@ export default function GroupDetailScreen() {
       }
     }
     if (Platform.OS === 'web') {
-      // Copy straight to the clipboard instead of opening the OS share sheet.
-      try {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-      } catch {
-        setErrorMsg(t('groupDetail.copyError'));
+      if (typeof navigator.share === 'function') {
+        try {
+          await navigator.share({ url });
+        } catch (err) {
+          // AbortError means the user closed the share sheet — not a failure.
+          if (err instanceof Error && err.name !== 'AbortError') {
+            setErrorMsg(t('groupDetail.shareError'));
+          }
+        }
+      } else {
+        // Older/desktop browsers without the Web Share API fall back to the
+        // clipboard, with a checkmark since there's no OS sheet to confirm it.
+        try {
+          await navigator.clipboard.writeText(url);
+          setCopied(true);
+        } catch {
+          setErrorMsg(t('groupDetail.copyError'));
+        }
       }
     } else {
       Share.share({ message: url }).catch(() => {});
@@ -501,7 +513,7 @@ export default function GroupDetailScreen() {
             <Pressable
               onPress={handleShare}
               style={styles.iconBtn}
-              accessibilityLabel={t('groupDetail.copyLink')}>
+              accessibilityLabel={t('groupDetail.shareLink')}>
               {copied ? (
                 <Icon name="check" size={20} color={Palette.green} />
               ) : (
