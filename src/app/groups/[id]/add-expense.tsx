@@ -4,12 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { CategoryPicker } from '@/components/category-picker';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { Icon } from '@/components/icon';
 import { ScreenMeta } from '@/components/screen-meta';
 import { DEFAULT_CATEGORY, guessCategory } from '@/constants/categories';
-import { Font, Radius, avatarColor, initial, type ThemeColors } from '@/constants/design';
+import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useColors } from '@/lib/settings';
@@ -364,7 +366,7 @@ export default function AddExpenseScreen() {
             ) : scanned ? (
               <View style={styles.scannedRow}>
                 <View style={styles.scannedIcon}>
-                  <Text style={styles.scannedCheck}>✓</Text>
+                  <Icon name="check" size={20} color={Palette.green} />
                 </View>
                 <Text style={styles.scannedText}>{t('addExpense.receiptAdded')}</Text>
               </View>
@@ -423,9 +425,7 @@ export default function AddExpenseScreen() {
                   key={m.id}
                   onPress={() => setPaidBy(m.id)}
                   style={[styles.chip, active && styles.chipActive]}>
-                  <View style={[styles.chipAvatar, { backgroundColor: avatarColor(m.id) }]}>
-                    <Text style={styles.chipAvatarText}>{initial(m.name)}</Text>
-                  </View>
+                  <Avatar uri={m.avatar_url} name={m.name} size={24} color={avatarColor(m.id)} fontSize={11} />
                   <Text style={[styles.chipName, active && styles.chipNameActive]}>{m.name}</Text>
                 </Pressable>
               );
@@ -460,9 +460,7 @@ export default function AddExpenseScreen() {
                 : 0;
               return (
                 <View key={m.id} style={styles.splitRow}>
-                  <View style={[styles.rowAvatar, { backgroundColor: avatarColor(m.id) }]}>
-                    <Text style={styles.rowAvatarText}>{initial(m.name)}</Text>
-                  </View>
+                  <Avatar uri={m.avatar_url} name={m.name} size={32} color={avatarColor(m.id)} fontSize={13} />
                   <Text style={styles.rowName} numberOfLines={1}>
                     {m.name}
                   </Text>
@@ -595,7 +593,6 @@ const makeStyles = (Palette: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scannedCheck: { color: Palette.green, fontSize: 18 },
   scannedText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.ink },
   inputCard: {
     backgroundColor: Palette.card,
@@ -622,8 +619,6 @@ const makeStyles = (Palette: ThemeColors) =>
     borderColor: Palette.cardBorder,
   },
   chipActive: { backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
-  chipAvatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  chipAvatarText: { color: '#fff', fontSize: 11, fontFamily: Font.sansSemibold },
   chipName: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.muted2 },
   chipNameActive: { color: Palette.ink },
   segment: { flexDirection: 'row', backgroundColor: Palette.inputBg, borderRadius: 13, padding: 4, marginBottom: 14 },
@@ -647,8 +642,6 @@ const makeStyles = (Palette: ThemeColors) =>
     borderBottomWidth: 1,
     borderBottomColor: Palette.divider,
   },
-  rowAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  rowAvatarText: { color: '#fff', fontSize: 13, fontFamily: Font.sansSemibold },
   rowName: { flex: 1, minWidth: 0, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
   rowDisplay: { fontFamily: Font.monoSemibold, fontSize: 14, color: Palette.ink },
   rowInputBox: {
