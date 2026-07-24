@@ -10,7 +10,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 export type IconName =
   | 'chevron-left'
   | 'download'
-  | 'copy'
+  | 'share'
   | 'x'
   | 'check'
   | 'world'
@@ -74,10 +74,12 @@ export function Icon({ name, size = 20, color, strokeWidth = 2 }: Props) {
     <Svg width={size} height={size} viewBox="0 0 24 24">
       {name === 'chevron-left' && <Path d="M14.5 6 L8.5 12 L14.5 18" {...common} />}
       {name === 'download' && <Path d="M12 3.5V14.5M7.5 10L12 14.5L16.5 10M5 18.5H19" {...common} />}
-      {name === 'copy' && (
+      {name === 'share' && (
         <>
-          <Rect x="8" y="8" width="11" height="12" rx="2" {...common} />
-          <Path d="M6 15H5.5A1.5 1.5 0 0 1 4 13.5v-9A1.5 1.5 0 0 1 5.5 3h9A1.5 1.5 0 0 1 16 4.5V6" {...common} />
+          <Path d="M6 12L18 6M6 12L18 18" {...common} />
+          <Circle cx="6" cy="12" r="2.5" fill={color} stroke="none" />
+          <Circle cx="18" cy="6" r="2.5" fill={color} stroke="none" />
+          <Circle cx="18" cy="18" r="2.5" fill={color} stroke="none" />
         </>
       )}
       {name === 'x' && <Path d="M6 6L18 18M18 6L6 18" {...common} />}

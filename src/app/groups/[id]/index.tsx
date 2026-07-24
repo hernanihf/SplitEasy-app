@@ -505,7 +505,7 @@ export default function GroupDetailScreen() {
               {copied ? (
                 <Icon name="check" size={20} color={Palette.green} />
               ) : (
-                <Icon name="copy" size={20} color={Palette.ink} />
+                <Icon name="share" size={20} color={Palette.ink} />
               )}
             </Pressable>
           </View>
