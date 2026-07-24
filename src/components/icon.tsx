@@ -45,6 +45,9 @@ export type IconName =
   | 'question'
   | 'cash'
   | 'message'
+  // Tab bar
+  | 'pulse'
+  | 'person'
   // Group icons — one per GROUP_EMOJIS entry (design.ts's groupIcon() maps
   // the stored emoji to these; several reuse the category icons above).
   | 'mountain'
@@ -234,6 +237,13 @@ export function Icon({ name, size = 20, color, strokeWidth = 2 }: Props) {
       )}
       {name === 'message' && (
         <Path d="M4 6A2 2 0 0 1 6 4H18A2 2 0 0 1 20 6V15A2 2 0 0 1 18 17H9L4 21V6Z" {...common} />
+      )}
+      {name === 'pulse' && <Path d="M22 12H18L15 21L9 3L6 12H2" {...common} />}
+      {name === 'person' && (
+        <>
+          <Circle cx="12" cy="8.5" r="3.7" {...common} />
+          <Path d="M5 20V19A5.5 5.5 0 0 1 10.5 13.5H13.5A5.5 5.5 0 0 1 19 19V20" {...common} />
+        </>
       )}
       {name === 'mountain' && <Path d="M2 19L8 6L12 12L16 6L22 19Z" {...common} />}
       {name === 'fire' && (

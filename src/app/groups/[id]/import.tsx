@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { Icon } from '@/components/icon';
 import { ScreenMeta } from '@/components/screen-meta';
 import { guessCategory } from '@/constants/categories';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
@@ -190,7 +191,7 @@ export default function ImportCsvScreen() {
           {result ? (
             <View style={styles.resultCard}>
               <View style={styles.resultCheck}>
-                <Text style={styles.resultCheckText}>✓</Text>
+                <Icon name="check" size={24} color="#fff" />
               </View>
               <Text style={styles.resultText}>
                 {t('importCsv.resultImported', { count: result.imported })}
@@ -377,7 +378,6 @@ const makeStyles = (Palette: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    resultCheckText: { color: '#fff', fontSize: 22 },
     resultText: { fontSize: 14.5, fontFamily: Font.sansMedium, color: Palette.greenDark, textAlign: 'center' },
     // resultCard centers its children, which otherwise shrinks this button
     // to its text — stretch it to match every other button on this screen.

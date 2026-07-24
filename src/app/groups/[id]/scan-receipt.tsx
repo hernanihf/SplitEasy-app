@@ -2,7 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/back-button';
@@ -82,7 +82,7 @@ export default function ScanReceiptScreen() {
 
           {scanning ? (
             <View style={styles.scanningRow}>
-              <View style={styles.spinner} />
+              <ActivityIndicator color={Palette.green} />
               <Text style={styles.scanningText}>{t('scanReceipt.reading')}</Text>
             </View>
           ) : (
@@ -130,14 +130,6 @@ const makeStyles = (Palette: ThemeColors) =>
   buttonText: { color: '#fff', fontSize: 15, fontFamily: Font.sansSemibold },
   secondaryText: { color: Palette.ink },
   scanningRow: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 10 },
-  spinner: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2.5,
-    borderColor: '#DCE4DF',
-    borderTopColor: Palette.green,
-  },
   scanningText: { fontSize: 14, fontFamily: Font.sansSemibold, color: Palette.ink },
   error: { color: Palette.red, fontSize: 13 },
 });

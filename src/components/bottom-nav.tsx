@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Icon, type IconName } from '@/components/icon';
 import { Font, type ThemeColors } from '@/constants/design';
 import { t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
@@ -10,10 +11,10 @@ import { useUnreadActivity } from '@/lib/unread-activity';
 const ORDER = ['index', 'activity', 'profile'] as const;
 type TabName = (typeof ORDER)[number];
 
-const TABS: Record<TabName, { glyph: string; labelKey: string; href: string }> = {
-  index: { glyph: '◎', labelKey: 'nav.groups', href: '/' },
-  activity: { glyph: '≋', labelKey: 'nav.activity', href: '/activity' },
-  profile: { glyph: '◉', labelKey: 'nav.profile', href: '/profile' },
+const TABS: Record<TabName, { icon: IconName; labelKey: string; href: string }> = {
+  index: { icon: 'home', labelKey: 'nav.groups', href: '/' },
+  activity: { icon: 'pulse', labelKey: 'nav.activity', href: '/activity' },
+  profile: { icon: 'person', labelKey: 'nav.profile', href: '/profile' },
 };
 
 type TabBarProps = {
@@ -52,7 +53,7 @@ export function BottomNav({ state, navigation, active }: TabBarProps) {
         return (
           <Pressable key={name} onPress={onPress} style={styles.tab}>
             <View style={styles.glyphWrap}>
-              <Text style={[styles.glyph, { color }]}>{tab.glyph}</Text>
+              <Icon name={tab.icon} size={21} color={color} />
               {name === 'activity' && unreadCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -87,9 +88,6 @@ const makeStyles = (Palette: ThemeColors) =>
   glyphWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  glyph: {
-    fontSize: 19,
   },
   badge: {
     position: 'absolute',
