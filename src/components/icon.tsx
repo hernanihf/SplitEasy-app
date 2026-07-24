@@ -265,9 +265,10 @@ export function Icon({ name, size = 20, color, strokeWidth = 2 }: Props) {
       {name === 'tent' && <Path d="M3 20L12 5L21 20M9 20L12 15L15 20" {...common} />}
       {name === 'bike' && (
         <>
-          <Circle cx="6" cy="17" r="3.2" {...common} />
-          <Circle cx="18" cy="17" r="3.2" {...common} />
-          <Path d="M6 17L10 8H13L18 17M10 8L13.5 13H18" {...common} />
+          <Circle cx="5.5" cy="17.5" r="3.5" {...common} />
+          <Circle cx="18.5" cy="17.5" r="3.5" {...common} />
+          <Path d="M5.5 17.5H12L9 6L16 10L18.5 17.5M12 17.5L16 10" {...common} />
+          <Circle cx="12" cy="17.5" r="1" fill={color} stroke="none" />
         </>
       )}
     </Svg>
