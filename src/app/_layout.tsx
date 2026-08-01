@@ -9,7 +9,7 @@ import {
   GeistMono_500Medium,
   GeistMono_600SemiBold,
 } from '@expo-google-fonts/geist-mono';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { useEffect, useState } from 'react';
@@ -99,7 +99,15 @@ function ThemedShell() {
           overflow: 'hidden',
         }}>
         <AuthGate>
-          <Slot />
+          {/* A plain Slot only ever renders the single active route, so
+              pushing from (tabs) to e.g. a group's expense-detail fully
+              unmounts the Tabs navigator underneath — popping back then
+              remounts it fresh, resetting to its first tab (Home) instead
+              of restoring whichever tab was actually focused. Stack keeps
+              the previous screen mounted, so back correctly lands where
+              the user actually came from. animation: 'none' keeps the
+              same instant-swap look Slot had — no new transition. */}
+          <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
         </AuthGate>
       </View>
     </View>
