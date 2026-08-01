@@ -19,6 +19,7 @@ import { useAuth } from '@/lib/auth';
 import { periodCutoff, type PeriodFilter } from '@/lib/date-filter';
 import { formatAmount, i18n, t } from '@/lib/i18n';
 import { useColors } from '@/lib/settings';
+import { getItem, setItem } from '@/lib/storage';
 import { useUnreadActivity } from '@/lib/unread-activity';
 import type { Expense, Settlement } from '@/app/groups/[id]/index';
 
@@ -46,7 +47,10 @@ type ActivityEvent = {
   parent_type?: 'expense' | 'settlement';
   parent_title?: string;
   // True when this event happened after the user last viewed the feed and
-  // they didn't cause it themselves — drives the unread dot below.
+  // they didn't cause it themselves. Only used to seed stillUnread below —
+  // the server resets the timestamp this is computed from on every visit
+  // (see markSeen), so it can't drive row styling directly or everything
+  // would read as "read" the moment you leave and come back.
   is_unread: boolean;
 };
 
@@ -57,6 +61,45 @@ function shortDate(iso: string): string {
   if (isNaN(d.getTime())) return '';
   const locale = i18n.locale === 'es' ? 'es-AR' : 'en-US';
   return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(d);
+}
+
+// A device-local, per-event "still unread" set — separate from the server's
+// activity_last_seen_at (which the tab bar's badge count uses, and which
+// resets on every tab focus by design). This is what actually drives a
+// row's bold/dim state: an event stays bold across any number of visits to
+// this tab until the user opens it specifically (see openEvent), instead of
+// clearing the instant the feed is glanced at.
+const STILL_UNREAD_STORAGE_KEY = 'activity_still_unread';
+// Capped well under SecureStore's ~2KB per-item limit on native — normal
+// use (opening things as they show up) keeps this far smaller in practice.
+const MAX_STILL_UNREAD_KEYS = 60;
+
+function eventKey(ev: Pick<ActivityEvent, 'type' | 'id' | 'date'>): string {
+  return `${ev.type}-${ev.id}-${ev.date}`;
+}
+
+async function loadStillUnread(): Promise<string[]> {
+  try {
+    const raw = await getItem(STILL_UNREAD_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Folds this fetch's newly-unread events into whatever was already stored
+// and persists the result — existing entries are never dropped here, only
+// by openEvent actually reading one. slice(-N) keeps the most recently
+// added keys when trimming, since [...Set] preserves insertion order.
+async function mergeStillUnread(events: ActivityEvent[]): Promise<Set<string>> {
+  const stored = await loadStillUnread();
+  const next = new Set(stored);
+  for (const ev of events) {
+    if (ev.is_unread) next.add(eventKey(ev));
+  }
+  const trimmed = [...next].slice(-MAX_STILL_UNREAD_KEYS);
+  await setItem(STILL_UNREAD_STORAGE_KEY, JSON.stringify(trimmed)).catch(() => {});
+  return new Set(trimmed);
 }
 
 export default function ActivityScreen() {
@@ -72,6 +115,7 @@ export default function ActivityScreen() {
   const [filterGroupId, setFilterGroupId] = useState<number | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterUserId, setFilterUserId] = useState<number | null>(null);
+  const [stillUnread, setStillUnread] = useState<Set<string>>(new Set());
   const Palette = useColors();
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const { markSeen } = useUnreadActivity();
@@ -81,14 +125,21 @@ export default function ActivityScreen() {
       setIsLoading(true);
       api
         .get<ActivityEvent[]>('/api/v1/activity')
-        .then((data) => setEvents(data ?? []))
+        .then((data) => {
+          const list = data ?? [];
+          setEvents(list);
+          return mergeStillUnread(list);
+        })
+        .then((merged) => setStillUnread(merged))
         .catch(() => {})
         .finally(() => {
           setIsLoading(false);
           // Marking seen after the fetch (not in parallel) matters: it
           // bumps activity_last_seen_at server-side, which is exactly what
-          // is_unread on the events above is computed against. Firing it
-          // first would make everything look already-read on this load.
+          // is_unread above is computed against — firing it first would
+          // make everything look already-read on this load. This only
+          // affects the tab badge now; stillUnread (merged above) is what
+          // actually keeps a row bold across visits.
           markSeen();
         });
     }, [api, markSeen]),
@@ -107,11 +158,28 @@ export default function ActivityScreen() {
     return () => clearTimeout(timer);
   }, [errorMsg]);
 
+  // Clears an event's stillUnread entry the moment it's tapped — reading it
+  // is the point, not whether the detail screen happens to load cleanly —
+  // and persists that regardless of markSeen's own (tab-wide, resets on
+  // every visit) timestamp.
+  const markEventRead = useCallback(
+    (ev: ActivityEvent) => {
+      const k = eventKey(ev);
+      if (!stillUnread.has(k)) return;
+      const next = new Set(stillUnread);
+      next.delete(k);
+      setStillUnread(next);
+      setItem(STILL_UNREAD_STORAGE_KEY, JSON.stringify([...next])).catch(() => {});
+    },
+    [stillUnread],
+  );
+
   const openEvent = useCallback(
     async (ev: ActivityEvent, key: string) => {
       // A deleted expense still opens — read-only — so the group can check
       // what it was for; only an in-flight open blocks a second tap.
       if (openingKey) return;
+      markEventRead(ev);
       setOpeningKey(key);
       try {
         // A comment event's id is its parent's id (see the ActivityEvent
@@ -145,7 +213,7 @@ export default function ActivityScreen() {
         setOpeningKey(null);
       }
     },
-    [api, myId, openingKey],
+    [api, myId, openingKey, markEventRead],
   );
 
   // Filter option lists are derived from whatever's actually in the feed —
@@ -239,6 +307,7 @@ export default function ActivityScreen() {
               const iconName = settlement ? 'cash' : comment ? 'message' : categoryIcon(ev.category);
               const iconColor = settlement ? Palette.green : comment ? Palette.muted : categoryColor(ev.category);
               const key = `${ev.type}-${ev.id}-${i}`;
+              const unread = stillUnread.has(eventKey(ev));
               return (
                 <Pressable
                   key={key}
@@ -248,7 +317,7 @@ export default function ActivityScreen() {
                     style={[
                       styles.tile,
                       { backgroundColor: `${iconColor}26` },
-                      !ev.is_unread && styles.tileRead,
+                      !unread && styles.tileRead,
                       ev.deleted && styles.deletedTile,
                     ]}>
                     <Icon name={iconName} size={18} color={iconColor} />
@@ -257,13 +326,13 @@ export default function ActivityScreen() {
                     <Text
                       style={[
                         styles.rowTitle,
-                        ev.is_unread ? styles.rowTitleUnread : styles.rowTitleRead,
+                        unread ? styles.rowTitleUnread : styles.rowTitleRead,
                         ev.deleted && styles.deletedText,
                       ]}
                       numberOfLines={1}>
                       {ev.title}
                     </Text>
-                    <Text style={[styles.rowSub, !ev.is_unread && styles.rowSubRead]} numberOfLines={1}>
+                    <Text style={[styles.rowSub, !unread && styles.rowSubRead]} numberOfLines={1}>
                       {ev.deleted
                         ? ev.deleted_by_name
                           ? t('activity.deletedBy', { name: ev.deleted_by_name, group: ev.group_name })
@@ -286,7 +355,7 @@ export default function ActivityScreen() {
                           style={[
                             styles.amount,
                             { color: settlement ? Palette.green : Palette.ink },
-                            !ev.is_unread && styles.amountRead,
+                            !unread && styles.amountRead,
                             ev.deleted && styles.deletedText,
                           ]}>
                           {formatAmount(ev.amount, ev.currency)}
