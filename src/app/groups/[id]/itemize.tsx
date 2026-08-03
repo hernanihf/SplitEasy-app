@@ -7,6 +7,7 @@ import { Avatar } from '@/components/avatar';
 import { BackButton } from '@/components/back-button';
 import { CategoryPicker } from '@/components/category-picker';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { Icon } from '@/components/icon';
 import { ScreenMeta } from '@/components/screen-meta';
 import { DEFAULT_CATEGORY } from '@/constants/categories';
 import { Font, Radius, avatarColor, type ThemeColors } from '@/constants/design';
@@ -17,18 +18,18 @@ import { useColors } from '@/lib/settings';
 import { distributeCents } from '@/lib/split-math';
 import type { Expense, Group } from '@/app/groups/[id]/index';
 
-type TaxMode = 'proportional' | 'equal';
-
 // Item amounts are edited as raw text (like every other amount field in this
 // app) and only parsed to cents where needed, so the input never fights the
 // user mid-keystroke re-formatting what they just typed.
 type EditableItem = { description: string; amountText: string };
+// Discounts, tips, and other adjustments to the items total — same free-text
+// amount, but signed via an explicit toggle rather than a leading '-'.
+type EditableAdjustment = { description: string; amountText: string; negative: boolean };
 
 export default function ItemizeScreen() {
   const {
     id,
     description,
-    total: totalParam,
     category: categoryParam,
     items: itemsParam,
     receiptImagePath,
@@ -66,26 +67,38 @@ export default function ItemizeScreen() {
     }
   }, [itemsParam]);
 
-  const total = useMemo(
-    () => (existing ? existing.amount : parseInt(totalParam ?? '0', 10) || 0),
-    [existing, totalParam],
-  );
-
   const [group, setGroup] = useState<Group | null>(null);
   const [desc, setDesc] = useState(existing?.description ?? description ?? '');
   const [category, setCategory] = useState<string>(
     existing?.category ?? categoryParam ?? DEFAULT_CATEGORY,
   );
   const [paidBy, setPaidBy] = useState<number | null>(existing?.paid_by.id ?? null);
+  // A previously-saved adjustment (discount, tip, fee) is just an item with a
+  // negative amount — split back into the two lists by sign so editing an
+  // existing itemized expense reopens with the same Items/Adjustments layout
+  // it was created with. Scanned receipts never carry a negative line, so
+  // they all land in items.
   const [items, setItems] = useState<EditableItem[]>(() => {
     const source = existing?.items ?? scannedItems;
-    return source.map((it) => ({ description: it.description, amountText: fromCents(it.amount) }));
+    return source
+      .filter((it) => it.amount >= 0)
+      .map((it) => ({ description: it.description, amountText: fromCents(it.amount) }));
   });
   // assignments[i] = user ids the item is shared among.
   const [assignments, setAssignments] = useState<number[][]>(() =>
-    existing?.items ? existing.items.map((it) => it.users.map((u) => u.id)) : [],
+    existing?.items
+      ? existing.items.filter((it) => it.amount >= 0).map((it) => it.users.map((u) => u.id))
+      : [],
   );
-  const [taxMode, setTaxMode] = useState<TaxMode>('proportional');
+  const [adjustments, setAdjustments] = useState<EditableAdjustment[]>(() => {
+    const source = existing?.items ?? [];
+    return source
+      .filter((it) => it.amount < 0)
+      .map((it) => ({ description: it.description, amountText: fromCents(-it.amount), negative: true }));
+  });
+  const [adjustmentAssignments, setAdjustmentAssignments] = useState<number[][]>(() =>
+    (existing?.items ?? []).filter((it) => it.amount < 0).map((it) => it.users.map((u) => u.id)),
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
@@ -102,40 +115,42 @@ export default function ItemizeScreen() {
       if (!isEditMode) {
         setPaidBy(g.members.some((m) => m.id === me.id) ? me.id : (g.members[0]?.id ?? null));
         const everyone = g.members.map((m) => m.id);
-        setAssignments(Array.from({ length: items.length }, () => [...everyone]));
+        setAssignments(Array.from({ length: scannedItems.length }, () => [...everyone]));
       }
     });
-    // items.length only varies at mount (items are editable in place, not
-    // added/removed), so it's safe here without re-running on every keystroke.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, api, isEditMode, items.length]);
+  }, [id, api, isEditMode, scannedItems.length]);
 
   const memberIds = group?.members.map((m) => m.id) ?? [];
   const itemCents = useMemo(() => items.map((it) => toCents(it.amountText)), [items]);
+  const adjustmentCents = useMemo(
+    () => adjustments.map((a) => (a.negative ? -1 : 1) * toCents(a.amountText)),
+    [adjustments],
+  );
+  const totalToSplit = useMemo(
+    () => itemCents.reduce((s, c) => s + c, 0) + adjustmentCents.reduce((s, c) => s + c, 0),
+    [itemCents, adjustmentCents],
+  );
 
-  const { perPerson, extra } = useMemo(() => {
-    const itemSub: Record<number, number> = {};
-    memberIds.forEach((uid) => (itemSub[uid] = 0));
+  // Items and adjustments are just two lists of signed lines sharing the
+  // same per-line distribution — each line's cents get split across whoever
+  // it's assigned to, and every member's shares across every line add up to
+  // what they owe.
+  const perPerson = useMemo(() => {
+    const sub: Record<number, number> = {};
+    memberIds.forEach((uid) => (sub[uid] = 0));
 
-    itemCents.forEach((cents, i) => {
-      const assigned = assignments[i] ?? [];
+    const applyLine = (cents: number, assigned: number[]) => {
       if (assigned.length === 0) return;
       const shares = distributeCents(cents, assigned.map(() => 1));
-      assigned.forEach((uid, k) => (itemSub[uid] = (itemSub[uid] ?? 0) + shares[k]));
-    });
+      assigned.forEach((uid, k) => (sub[uid] = (sub[uid] ?? 0) + shares[k]));
+    };
 
-    const sumItems = itemCents.reduce((s, c) => s + c, 0);
-    const extra = total - sumItems;
+    itemCents.forEach((cents, i) => applyLine(cents, assignments[i] ?? []));
+    adjustmentCents.forEach((cents, i) => applyLine(cents, adjustmentAssignments[i] ?? []));
 
-    const useProportional = taxMode === 'proportional' && memberIds.some((uid) => itemSub[uid] > 0);
-    const weights = useProportional ? memberIds.map((uid) => itemSub[uid]) : memberIds.map(() => 1);
-    const extraShares = distributeCents(extra, weights);
-
-    const perPerson: Record<number, number> = {};
-    memberIds.forEach((uid, i) => (perPerson[uid] = (itemSub[uid] ?? 0) + extraShares[i]));
-    return { perPerson, extra };
+    return sub;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemCents, assignments, taxMode, group, total]);
+  }, [itemCents, assignments, adjustmentCents, adjustmentAssignments, group]);
 
   const toggle = (itemIndex: number, userId: number) => {
     setAssignments((prev) =>
@@ -154,12 +169,72 @@ export default function ItemizeScreen() {
     setItems((prev) => prev.map((it, i) => (i === itemIndex ? { ...it, amountText: value } : it)));
   };
 
+  const addItem = () => {
+    setItems((prev) => [...prev, { description: '', amountText: '' }]);
+    setAssignments((prev) => [...prev, [...memberIds]]);
+  };
+
+  const removeItem = (itemIndex: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== itemIndex));
+    setAssignments((prev) => prev.filter((_, i) => i !== itemIndex));
+  };
+
+  const toggleAdjustment = (adjIndex: number, userId: number) => {
+    setAdjustmentAssignments((prev) =>
+      prev.map((a, i) => {
+        if (i !== adjIndex) return a;
+        return a.includes(userId) ? a.filter((u) => u !== userId) : [...a, userId];
+      }),
+    );
+  };
+
+  const updateAdjustmentDescription = (adjIndex: number, value: string) => {
+    setAdjustments((prev) => prev.map((a, i) => (i === adjIndex ? { ...a, description: value } : a)));
+  };
+
+  const updateAdjustmentAmount = (adjIndex: number, value: string) => {
+    setAdjustments((prev) => prev.map((a, i) => (i === adjIndex ? { ...a, amountText: value } : a)));
+  };
+
+  const toggleAdjustmentSign = (adjIndex: number, negative: boolean) => {
+    setAdjustments((prev) => prev.map((a, i) => (i === adjIndex ? { ...a, negative } : a)));
+  };
+
+  const addAdjustment = () => {
+    setAdjustments((prev) => [...prev, { description: '', amountText: '', negative: true }]);
+    setAdjustmentAssignments((prev) => [...prev, [...memberIds]]);
+  };
+
+  const removeAdjustment = (adjIndex: number) => {
+    setAdjustments((prev) => prev.filter((_, i) => i !== adjIndex));
+    setAdjustmentAssignments((prev) => prev.filter((_, i) => i !== adjIndex));
+  };
+
   const confirm = async () => {
     if (!group || !paidBy) return;
-    if (items.some((it) => !it.description.trim() || toCents(it.amountText) <= 0)) {
+
+    // Blank rows (never touched after being added) are dropped silently
+    // instead of forcing the user to explicitly delete every one they
+    // didn't end up using.
+    const cleanItems = items
+      .map((it, i) => ({ it, assigned: assignments[i] ?? [] }))
+      .filter(({ it }) => it.description.trim() || toCents(it.amountText) !== 0);
+    const cleanAdjustments = adjustments
+      .map((a, i) => ({ a, assigned: adjustmentAssignments[i] ?? [] }))
+      .filter(({ a }) => a.description.trim() || toCents(a.amountText) !== 0);
+
+    if (cleanItems.some(({ it }) => !it.description.trim() || toCents(it.amountText) <= 0)) {
       return setError(t('itemize.itemsInvalid'));
     }
-    if (assignments.some((a) => a.length === 0)) return setError(t('itemize.assignAll'));
+    if (cleanAdjustments.some(({ a }) => !a.description.trim() || toCents(a.amountText) === 0)) {
+      return setError(t('itemize.adjustmentsInvalid'));
+    }
+    if (
+      cleanItems.some(({ assigned }) => assigned.length === 0) ||
+      cleanAdjustments.some(({ assigned }) => assigned.length === 0)
+    ) {
+      return setError(t('itemize.assignAll'));
+    }
 
     setSubmitting(true);
     setError(null);
@@ -168,14 +243,21 @@ export default function ItemizeScreen() {
       paid_by_id: paidBy,
       description: desc.trim() || t('scanReceipt.defaultMerchant'),
       category,
-      amount: total,
+      amount: totalToSplit,
       split_method: 'fixed',
       splits: group.members.map((m) => ({ user_id: m.id, value: perPerson[m.id] ?? 0 })),
-      items: items.map((it, i) => ({
-        description: it.description.trim(),
-        amount: itemCents[i],
-        user_ids: assignments[i] ?? [],
-      })),
+      items: [
+        ...cleanItems.map(({ it, assigned }) => ({
+          description: it.description.trim(),
+          amount: toCents(it.amountText),
+          user_ids: assigned,
+        })),
+        ...cleanAdjustments.map(({ a, assigned }) => ({
+          description: a.description.trim(),
+          amount: (a.negative ? -1 : 1) * toCents(a.amountText),
+          user_ids: assigned,
+        })),
+      ],
       // Only ever present for a brand-new itemized expense created from a
       // scan — editing doesn't re-scan, and the backend never sends the raw
       // storage path back to the client, so there's nothing to preserve
@@ -216,7 +298,7 @@ export default function ItemizeScreen() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.totalCard}>
             <Text style={styles.totalLabel}>{t('itemize.total')}</Text>
-            <Text style={styles.totalValue}>{formatAmount(total, group.currency)}</Text>
+            <Text style={styles.totalValue}>{formatAmount(totalToSplit, group.currency)}</Text>
           </View>
 
           <TextInput
@@ -271,6 +353,9 @@ export default function ItemizeScreen() {
                       placeholderTextColor={Palette.muted}
                       style={styles.itemAmountInput}
                     />
+                    <Pressable onPress={() => removeItem(i)} hitSlop={8} style={styles.rowDeleteBtn}>
+                      <Icon name="x" size={13} color={Palette.muted} />
+                    </Pressable>
                   </View>
                 </View>
                 <View style={styles.assignRow}>
@@ -290,33 +375,75 @@ export default function ItemizeScreen() {
               </View>
             ))}
           </View>
+          <Pressable onPress={addItem} style={styles.addRowBtn}>
+            <Text style={styles.addRowBtnText}>{t('itemize.addItem')}</Text>
+          </Pressable>
 
-          {/* tax / tip, or a discount when items sum to more than the total */}
-          {extra !== 0 && (
-            <>
-              <View style={styles.taxHeader}>
-                <Text style={styles.sectionLabel}>
-                  {t(extra < 0 ? 'itemize.discount' : 'itemize.taxTip')}
-                </Text>
-                <Text style={styles.taxAmount}>{formatAmount(extra, group.currency)}</Text>
-              </View>
-              <View style={styles.segment}>
-                {(['proportional', 'equal'] as TaxMode[]).map((mode) => {
-                  const active = taxMode === mode;
-                  return (
-                    <Pressable
-                      key={mode}
-                      onPress={() => setTaxMode(mode)}
-                      style={[styles.segmentBtn, active && styles.segmentBtnActive]}>
-                      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                        {t(mode === 'proportional' ? 'itemize.proportional' : 'itemize.equal')}
-                      </Text>
+          {/* discounts, tips, fees — anything that changes the items total */}
+          <Text style={styles.sectionLabel}>{t('itemize.adjustments')}</Text>
+          <View style={styles.card}>
+            {adjustments.length === 0 && (
+              <Text style={styles.adjustmentsEmpty}>{t('itemize.adjustmentsEmpty')}</Text>
+            )}
+            {adjustments.map((a, i) => (
+              <View key={i} style={styles.itemRow}>
+                <View style={styles.itemHeader}>
+                  <TextInput
+                    value={a.description}
+                    onChangeText={(v) => updateAdjustmentDescription(i, v)}
+                    placeholder={t('addExpense.descriptionPlaceholder')}
+                    placeholderTextColor={Palette.muted}
+                    style={[styles.itemDescInput, styles.adjustmentText]}
+                  />
+                  <View style={[styles.itemAmountRow, styles.adjustmentAmountRow]}>
+                    <View style={styles.signToggle}>
+                      <Pressable
+                        onPress={() => toggleAdjustmentSign(i, true)}
+                        style={[styles.signBtn, a.negative && styles.signBtnActiveNegative]}>
+                        <Text style={[styles.signBtnText, a.negative && styles.signBtnTextActive]}>−</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => toggleAdjustmentSign(i, false)}
+                        style={[styles.signBtn, !a.negative && styles.signBtnActivePositive]}>
+                        <Text style={[styles.signBtnText, !a.negative && styles.signBtnTextActive]}>+</Text>
+                      </Pressable>
+                    </View>
+                    <Text style={[styles.itemAmountDollar, styles.adjustmentText]}>
+                      {currencySymbol(group.currency)}
+                    </Text>
+                    <TextInput
+                      value={a.amountText}
+                      onChangeText={(v) => updateAdjustmentAmount(i, v)}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      placeholderTextColor={Palette.muted}
+                      style={[styles.itemAmountInput, styles.adjustmentText]}
+                    />
+                    <Pressable onPress={() => removeAdjustment(i)} hitSlop={8} style={styles.rowDeleteBtn}>
+                      <Icon name="x" size={13} color={Palette.muted} />
                     </Pressable>
-                  );
-                })}
+                  </View>
+                </View>
+                <View style={styles.assignRow}>
+                  {group.members.map((m) => {
+                    const on = (adjustmentAssignments[i] ?? []).includes(m.id);
+                    return (
+                      <Pressable
+                        key={m.id}
+                        onPress={() => toggleAdjustment(i, m.id)}
+                        style={[styles.assignChip, on && styles.assignChipOnAdjustment]}>
+                        <Avatar uri={m.avatar_url} name={m.name} size={22} color={avatarColor(m.id)} fontSize={10} />
+                        <Text style={[styles.assignName, on && styles.assignNameOnAdjustment]}>{m.name}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
-            </>
-          )}
+            ))}
+          </View>
+          <Pressable onPress={addAdjustment} style={styles.addRowBtn}>
+            <Text style={styles.addRowBtnText}>{t('itemize.addAdjustment')}</Text>
+          </Pressable>
 
           {/* per-person preview */}
           <Text style={styles.sectionLabel}>{t('itemize.perPerson')}</Text>
@@ -430,7 +557,10 @@ const makeStyles = (Palette: ThemeColors) =>
     // edge (a column), regardless of how long the item name or the currency
     // code (e.g. "ARS" vs "$") is — the symbol and digits stay glued
     // together as a group, just anchored to the box's right edge.
-    itemAmountRow: { flexDirection: 'row', alignItems: 'center', flexShrink: 0, width: 92, justifyContent: 'flex-end' },
+    itemAmountRow: { flexDirection: 'row', alignItems: 'center', flexShrink: 0, width: 108, justifyContent: 'flex-end' },
+    // Adjustments carry a sign toggle too, so their row needs more room than
+    // a plain item row.
+    adjustmentAmountRow: { width: 168 },
     itemAmountDollar: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.muted, marginRight: 3 },
     // Without maxWidth, react-native-web resolves this <input>'s width against
     // the viewport rather than its actual container, which — inside a
@@ -444,6 +574,40 @@ const makeStyles = (Palette: ThemeColors) =>
       maxWidth: 64,
       paddingVertical: 4,
     },
+    rowDeleteBtn: { marginLeft: 7, padding: 2 },
+    addRowBtn: {
+      marginTop: 10,
+      marginBottom: 2,
+      paddingVertical: 11,
+      borderRadius: Radius.md,
+      borderWidth: 1.5,
+      borderColor: Palette.cardBorder,
+      borderStyle: 'dashed',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    addRowBtnText: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.muted },
+    adjustmentText: { color: Palette.red },
+    adjustmentsEmpty: {
+      fontSize: 12.5,
+      fontFamily: Font.sans,
+      color: Palette.muted,
+      textAlign: 'center',
+      paddingVertical: 14,
+    },
+    signToggle: {
+      flexDirection: 'row',
+      borderWidth: 1,
+      borderColor: Palette.cardBorder,
+      borderRadius: 8,
+      overflow: 'hidden',
+      marginRight: 6,
+    },
+    signBtn: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+    signBtnActiveNegative: { backgroundColor: Palette.red },
+    signBtnActivePositive: { backgroundColor: Palette.green },
+    signBtnText: { fontSize: 14, fontFamily: Font.sansBold, color: Palette.muted },
+    signBtnTextActive: { color: '#fff' },
     assignRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 9 },
     assignChip: {
       flexDirection: 'row',
@@ -457,15 +621,10 @@ const makeStyles = (Palette: ThemeColors) =>
       opacity: 0.45,
     },
     assignChipOn: { opacity: 1, backgroundColor: Palette.greenTint, borderColor: Palette.greenTintBorder },
+    assignChipOnAdjustment: { opacity: 1, backgroundColor: `${Palette.red}26`, borderColor: `${Palette.red}55` },
     assignName: { fontSize: 12.5, fontFamily: Font.sansMedium, color: Palette.ink },
     assignNameOn: { color: Palette.greenDark },
-    taxHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    taxAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink, marginTop: 14 },
-    segment: { flexDirection: 'row', backgroundColor: Palette.inputBg, borderRadius: 13, padding: 4 },
-    segmentBtn: { flex: 1, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-    segmentBtnActive: { backgroundColor: Palette.card, borderWidth: StyleSheet.hairlineWidth, borderColor: Palette.cardBorder },
-    segmentText: { fontSize: 13.5, fontFamily: Font.sansMedium, color: Palette.muted2 },
-    segmentTextActive: { color: Palette.ink, fontFamily: Font.sansSemibold },
+    assignNameOnAdjustment: { color: Palette.red },
     previewRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 10 },
     previewName: { flex: 1, minWidth: 0, fontSize: 14, fontFamily: Font.sansMedium, color: Palette.ink },
     previewAmount: { fontSize: 14, fontFamily: Font.monoSemibold, color: Palette.ink },
