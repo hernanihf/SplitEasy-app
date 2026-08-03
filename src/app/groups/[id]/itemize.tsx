@@ -393,7 +393,7 @@ export default function ItemizeScreen() {
                     onChangeText={(v) => updateAdjustmentDescription(i, v)}
                     placeholder={t('addExpense.descriptionPlaceholder')}
                     placeholderTextColor={Palette.muted}
-                    style={[styles.itemDescInput, styles.adjustmentText]}
+                    style={[styles.itemDescInput, a.negative ? styles.adjustmentTextNegative : styles.adjustmentTextPositive]}
                   />
                   <View style={[styles.itemAmountRow, styles.adjustmentAmountRow]}>
                     <View style={styles.signToggle}>
@@ -408,7 +408,11 @@ export default function ItemizeScreen() {
                         <Text style={[styles.signBtnText, !a.negative && styles.signBtnTextActive]}>+</Text>
                       </Pressable>
                     </View>
-                    <Text style={[styles.itemAmountDollar, styles.adjustmentText]}>
+                    <Text
+                      style={[
+                        styles.itemAmountDollar,
+                        a.negative ? styles.adjustmentTextNegative : styles.adjustmentTextPositive,
+                      ]}>
                       {currencySymbol(group.currency)}
                     </Text>
                     <TextInput
@@ -417,7 +421,10 @@ export default function ItemizeScreen() {
                       keyboardType="decimal-pad"
                       placeholder="0"
                       placeholderTextColor={Palette.muted}
-                      style={[styles.itemAmountInput, styles.adjustmentText]}
+                      style={[
+                        styles.itemAmountInput,
+                        a.negative ? styles.adjustmentTextNegative : styles.adjustmentTextPositive,
+                      ]}
                     />
                     <Pressable onPress={() => removeAdjustment(i)} hitSlop={8} style={styles.rowDeleteBtn}>
                       <Icon name="x" size={13} color={Palette.muted} />
@@ -427,13 +434,15 @@ export default function ItemizeScreen() {
                 <View style={styles.assignRow}>
                   {group.members.map((m) => {
                     const on = (adjustmentAssignments[i] ?? []).includes(m.id);
+                    const onStyle = a.negative ? styles.assignChipOnAdjustment : styles.assignChipOn;
+                    const nameOnStyle = a.negative ? styles.assignNameOnAdjustment : styles.assignNameOn;
                     return (
                       <Pressable
                         key={m.id}
                         onPress={() => toggleAdjustment(i, m.id)}
-                        style={[styles.assignChip, on && styles.assignChipOnAdjustment]}>
+                        style={[styles.assignChip, on && onStyle]}>
                         <Avatar uri={m.avatar_url} name={m.name} size={22} color={avatarColor(m.id)} fontSize={10} />
-                        <Text style={[styles.assignName, on && styles.assignNameOnAdjustment]}>{m.name}</Text>
+                        <Text style={[styles.assignName, on && nameOnStyle]}>{m.name}</Text>
                       </Pressable>
                     );
                   })}
@@ -587,7 +596,8 @@ const makeStyles = (Palette: ThemeColors) =>
       justifyContent: 'center',
     },
     addRowBtnText: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.muted },
-    adjustmentText: { color: Palette.red },
+    adjustmentTextNegative: { color: Palette.red },
+    adjustmentTextPositive: { color: Palette.greenDark },
     adjustmentsEmpty: {
       fontSize: 12.5,
       fontFamily: Font.sans,
