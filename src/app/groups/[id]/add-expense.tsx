@@ -24,6 +24,11 @@ import type { Expense, Group } from '@/app/groups/[id]/index';
 
 type SplitMethod = 'equal' | 'fixed' | 'percentage';
 
+// Discounts, tips, and other adjustments to the typed amount — same shape as
+// itemize.tsx's, but applied to everyone (this screen has no per-item
+// per-person assignment, only a single group-wide split method).
+type EditableAdjustment = { description: string; amountText: string; negative: boolean };
+
 const METHODS: { value: SplitMethod; key: string }[] = [
   { value: 'equal', key: 'addExpense.methodEqual' },
   { value: 'fixed', key: 'addExpense.methodFixed' },
@@ -83,6 +88,11 @@ export default function AddExpenseScreen() {
     }
     return initialValues;
   });
+  // Always starts empty: an edit whose expense actually has items (which is
+  // where a previously-added adjustment would live, since it's persisted as
+  // a negative-amount item) is routed to itemize.tsx instead of here — see
+  // expense-detail.tsx's hasItems check.
+  const [adjustments, setAdjustments] = useState<EditableAdjustment[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Separate from `error` (which lives at the bottom of the form, next to
   // the submit button) — a scan failure needs to be seen right where the
@@ -111,8 +121,9 @@ export default function AddExpenseScreen() {
     ? desc !== existing?.description ||
       toCents(amount) !== existing?.amount ||
       category !== existing?.category ||
-      paidBy !== existing?.paid_by.id
-    : desc.trim() !== '' || amount.trim() !== '';
+      paidBy !== existing?.paid_by.id ||
+      adjustments.length > 0
+    : desc.trim() !== '' || amount.trim() !== '' || adjustments.length > 0;
 
   const handleBack = () => {
     if (isDirty) {
@@ -194,8 +205,23 @@ export default function AddExpenseScreen() {
       });
   }, [id, api, isEditMode]);
 
-  const amountNumber = useMemo(() => parseFloat(amount.replace(',', '.')) || 0, [amount]);
   const amountCents = useMemo(() => toCents(amount), [amount]);
+  const adjustmentCents = useMemo(
+    () => adjustments.reduce((s, a) => s + (a.negative ? -1 : 1) * toCents(a.amountText), 0),
+    [adjustments],
+  );
+  // What's actually charged and split — the typed amount plus every
+  // discount/tip/fee adjustment on top of it.
+  const totalCents = amountCents + adjustmentCents;
+
+  const addAdjustment = () => setAdjustments((prev) => [...prev, { description: '', amountText: '', negative: true }]);
+  const removeAdjustment = (i: number) => setAdjustments((prev) => prev.filter((_, idx) => idx !== i));
+  const updateAdjustmentDescription = (i: number, value: string) =>
+    setAdjustments((prev) => prev.map((a, idx) => (idx === i ? { ...a, description: value } : a)));
+  const updateAdjustmentAmount = (i: number, value: string) =>
+    setAdjustments((prev) => prev.map((a, idx) => (idx === i ? { ...a, amountText: value } : a)));
+  const toggleAdjustmentSign = (i: number, negative: boolean) =>
+    setAdjustments((prev) => prev.map((a, idx) => (idx === i ? { ...a, negative } : a)));
 
   // "Amounts" and "Percent" share the same `values` state but disagree on
   // its unit (cents vs. percentage points) — switching tabs without
@@ -203,13 +229,13 @@ export default function AddExpenseScreen() {
   // split's dollar amounts) displayed under the wrong unit, e.g. "$17.33"
   // reappearing as "17.33%" instead of the real share of the total.
   const changeMethod = (next: SplitMethod) => {
-    if (group && amountCents > 0) {
+    if (group && totalCents > 0) {
       if (method === 'fixed' && next === 'percentage') {
         setValues((prev) => {
           const converted: Record<number, string> = {};
           for (const m of group.members) {
             const cents = toCents(prev[m.id] ?? '');
-            converted[m.id] = cents > 0 ? String(Math.round((cents / amountCents) * 10000) / 100) : '';
+            converted[m.id] = cents > 0 ? String(Math.round((cents / totalCents) * 10000) / 100) : '';
           }
           return converted;
         });
@@ -218,7 +244,7 @@ export default function AddExpenseScreen() {
           const converted: Record<number, string> = {};
           for (const m of group.members) {
             const pct = parseFloat((prev[m.id] ?? '').replace(',', '.')) || 0;
-            converted[m.id] = pct > 0 ? fromCents(Math.round((pct / 100) * amountCents)) : '';
+            converted[m.id] = pct > 0 ? fromCents(Math.round((pct / 100) * totalCents)) : '';
           }
           return converted;
         });
@@ -238,7 +264,18 @@ export default function AddExpenseScreen() {
   const submit = async () => {
     if (!group || !paidBy) return;
     if (!desc.trim()) return setError(t('addExpense.descriptionRequired'));
-    if (amountNumber <= 0) return setError(t('addExpense.amountPositive'));
+
+    // Blank rows (added but never filled in) are dropped silently instead of
+    // forcing the user to explicitly delete every one they didn't use.
+    const cleanAdjustments = adjustments.filter(
+      (a) => a.description.trim() || toCents(a.amountText) !== 0,
+    );
+    if (cleanAdjustments.some((a) => !a.description.trim() || toCents(a.amountText) === 0)) {
+      return setError(t('itemize.adjustmentsInvalid'));
+    }
+    if (totalCents <= 0) return setError(t('addExpense.amountPositive'));
+
+    const totalNumber = totalCents / 100;
 
     // Fixed split values are sent as cents; percentage values stay percentages.
     let splits: { user_id: number; value: number }[];
@@ -246,8 +283,8 @@ export default function AddExpenseScreen() {
       splits = group.members.map((m) => ({ user_id: m.id, value: 0 }));
     } else if (method === 'fixed') {
       splits = group.members.map((m) => ({ user_id: m.id, value: toCents(values[m.id] ?? '') }));
-      if (Math.abs(splitTotal - amountNumber) > 0.01)
-        return setError(t('addExpense.amountsMustTotal', { amount: formatAmount(amountCents, group.currency) }));
+      if (Math.abs(splitTotal - totalNumber) > 0.01)
+        return setError(t('addExpense.amountsMustTotal', { amount: formatAmount(totalCents, group.currency) }));
     } else {
       splits = group.members.map((m) => ({
         user_id: m.id,
@@ -257,6 +294,12 @@ export default function AddExpenseScreen() {
         return setError(t('addExpense.percentagesMustTotal'));
     }
 
+    const items = cleanAdjustments.map((a) => ({
+      description: a.description.trim(),
+      amount: (a.negative ? -1 : 1) * toCents(a.amountText),
+      user_ids: group.members.map((m) => m.id),
+    }));
+
     setSubmitting(true);
     setError(null);
     try {
@@ -265,9 +308,10 @@ export default function AddExpenseScreen() {
           paid_by_id: paidBy,
           description: desc.trim(),
           category,
-          amount: amountCents,
+          amount: totalCents,
           split_method: method,
           splits,
+          ...(items.length > 0 ? { items } : {}),
           ...(receiptImagePath ? { receipt_image_path: receiptImagePath } : {}),
         });
       } else {
@@ -276,9 +320,10 @@ export default function AddExpenseScreen() {
           paid_by_id: paidBy,
           description: desc.trim(),
           category,
-          amount: amountCents,
+          amount: totalCents,
           split_method: method,
           splits,
+          ...(items.length > 0 ? { items } : {}),
           ...(receiptImagePath ? { receipt_image_path: receiptImagePath } : {}),
         };
         // Offline (or the server is simply unreachable) — a new expense is
@@ -434,6 +479,63 @@ export default function AddExpenseScreen() {
             })}
           </View>
 
+          {/* extra adjustments: discounts, tips, fees on top of the typed amount */}
+          <Text style={styles.sectionLabel}>{t('itemize.adjustments')}</Text>
+          <View style={styles.adjustmentsCard}>
+            {adjustments.length === 0 && (
+              <Text style={styles.adjustmentsEmpty}>{t('itemize.adjustmentsEmpty')}</Text>
+            )}
+            {adjustments.map((a, i) => (
+              <View key={i} style={styles.adjRow}>
+                <TextInput
+                  value={a.description}
+                  onChangeText={(v) => updateAdjustmentDescription(i, v)}
+                  placeholder={t('addExpense.descriptionPlaceholder')}
+                  placeholderTextColor={Palette.muted}
+                  style={[styles.adjDescInput, a.negative ? styles.adjustmentTextNegative : styles.adjustmentTextPositive]}
+                />
+                <View style={styles.adjAmountRow}>
+                  <View style={styles.signToggle}>
+                    <Pressable
+                      onPress={() => toggleAdjustmentSign(i, true)}
+                      style={[styles.signBtn, a.negative && styles.signBtnActiveNegative]}>
+                      <Text style={[styles.signBtnText, a.negative && styles.signBtnTextActive]}>−</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => toggleAdjustmentSign(i, false)}
+                      style={[styles.signBtn, !a.negative && styles.signBtnActivePositive]}>
+                      <Text style={[styles.signBtnText, !a.negative && styles.signBtnTextActive]}>+</Text>
+                    </Pressable>
+                  </View>
+                  <Text
+                    style={[
+                      styles.adjDollar,
+                      a.negative ? styles.adjustmentTextNegative : styles.adjustmentTextPositive,
+                    ]}>
+                    {currencySymbol(group.currency)}
+                  </Text>
+                  <TextInput
+                    value={a.amountText}
+                    onChangeText={(v) => updateAdjustmentAmount(i, v)}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={Palette.muted}
+                    style={[
+                      styles.adjAmountInput,
+                      a.negative ? styles.adjustmentTextNegative : styles.adjustmentTextPositive,
+                    ]}
+                  />
+                  <Pressable onPress={() => removeAdjustment(i)} hitSlop={8} style={styles.rowDeleteBtn}>
+                    <Icon name="x" size={13} color={Palette.muted} />
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+          <Pressable onPress={addAdjustment} style={styles.addRowBtn}>
+            <Text style={styles.addRowBtnText}>{t('itemize.addAdjustment')}</Text>
+          </Pressable>
+
           {/* split mode */}
           <Text style={styles.sectionLabel}>{t('addExpense.howSplit')}</Text>
           <View style={styles.segment}>
@@ -458,7 +560,7 @@ export default function AddExpenseScreen() {
           <View style={styles.splitCard}>
             {group.members.map((m) => {
               const equalShare = group.members.length
-                ? Math.round(amountCents / group.members.length)
+                ? Math.round(totalCents / group.members.length)
                 : 0;
               return (
                 <View key={m.id} style={styles.splitRow}>
@@ -668,6 +770,63 @@ const makeStyles = (Palette: ThemeColors) =>
     color: Palette.ink,
     padding: 0,
   },
+  adjustmentsCard: {
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    borderRadius: Radius.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    marginBottom: 10,
+  },
+  adjustmentsEmpty: {
+    fontSize: 12.5,
+    fontFamily: Font.sans,
+    color: Palette.muted,
+    textAlign: 'center',
+    paddingVertical: 14,
+  },
+  adjRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: Palette.divider,
+  },
+  adjDescInput: { flex: 1, minWidth: 0, fontSize: 14.5, fontFamily: Font.sansMedium, paddingVertical: 4 },
+  adjAmountRow: { flexDirection: 'row', alignItems: 'center', flexShrink: 0, width: 168, justifyContent: 'flex-end' },
+  adjDollar: { fontSize: 14, fontFamily: Font.monoSemibold, marginRight: 3 },
+  adjAmountInput: { fontSize: 14, fontFamily: Font.monoSemibold, minWidth: 34, maxWidth: 64, paddingVertical: 4 },
+  rowDeleteBtn: { marginLeft: 7, padding: 2 },
+  addRowBtn: {
+    marginTop: 2,
+    marginBottom: 18,
+    paddingVertical: 11,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    borderColor: Palette.cardBorder,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addRowBtnText: { fontSize: 13, fontFamily: Font.sansSemibold, color: Palette.muted },
+  adjustmentTextNegative: { color: Palette.red },
+  adjustmentTextPositive: { color: Palette.greenDark },
+  signToggle: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: Palette.cardBorder,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginRight: 6,
+  },
+  signBtn: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  signBtnActiveNegative: { backgroundColor: Palette.red },
+  signBtnActivePositive: { backgroundColor: Palette.green },
+  signBtnText: { fontSize: 14, fontFamily: Font.sansBold, color: Palette.muted },
+  signBtnTextActive: { color: '#fff' },
   splitHint: {
     flexDirection: 'row',
     justifyContent: 'space-between',
