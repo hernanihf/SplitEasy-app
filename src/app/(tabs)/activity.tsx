@@ -1,11 +1,12 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   FilterBadgeButton,
   FilterChipRow,
+  FilterSearchInput,
   FilterSection,
   FilterSegment,
   FilterSheet,
@@ -110,6 +111,7 @@ export default function ActivityScreen() {
   const [openingKey, setOpeningKey] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterQuery, setFilterQuery] = useState('');
   const [filterType, setFilterType] = useState<TypeFilter>('all');
   const [filterPeriod, setFilterPeriod] = useState<PeriodFilter>('all');
   const [filterGroupId, setFilterGroupId] = useState<number | null>(null);
@@ -120,11 +122,17 @@ export default function ActivityScreen() {
   const styles = useMemo(() => makeStyles(Palette), [Palette]);
   const { markSeen } = useUnreadActivity();
 
-  useFocusEffect(
-    useCallback(() => {
+  // Search reaches the user's full history server-side (see the backend's
+  // GetActivity `q` param), not just the client-visible recent cap — so it's
+  // a network call, not a client-side .filter() like the other filters below.
+  const fetchActivity = useCallback(
+    (query: string) => {
       setIsLoading(true);
-      api
-        .get<ActivityEvent[]>('/api/v1/activity')
+      const path = query.trim()
+        ? `/api/v1/activity?q=${encodeURIComponent(query.trim())}`
+        : '/api/v1/activity';
+      return api
+        .get<ActivityEvent[]>(path)
         .then((data) => {
           const list = data ?? [];
           setEvents(list);
@@ -132,18 +140,47 @@ export default function ActivityScreen() {
         })
         .then((merged) => setStillUnread(merged))
         .catch(() => {})
-        .finally(() => {
-          setIsLoading(false);
-          // Marking seen after the fetch (not in parallel) matters: it
-          // bumps activity_last_seen_at server-side, which is exactly what
-          // is_unread above is computed against — firing it first would
-          // make everything look already-read on this load. This only
-          // affects the tab badge now; stillUnread (merged above) is what
-          // actually keeps a row bold across visits.
-          markSeen();
-        });
-    }, [api, markSeen]),
+        .finally(() => setIsLoading(false));
+    },
+    [api],
   );
+
+  // Kept alongside filterQuery's own state so the focus effect below can
+  // read "whatever's currently typed" without listing filterQuery as a
+  // dependency — that would re-run it (and markSeen) on every keystroke,
+  // racing with the debounced search effect further down.
+  const filterQueryRef = useRef(filterQuery);
+  useEffect(() => {
+    filterQueryRef.current = filterQuery;
+  }, [filterQuery]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchActivity(filterQueryRef.current).finally(() => {
+        // Marking seen after the fetch (not in parallel) matters: it bumps
+        // activity_last_seen_at server-side, which is exactly what
+        // is_unread above is computed against — firing it first would make
+        // everything look already-read on this load. This only affects the
+        // tab badge now; stillUnread (merged in fetchActivity) is what
+        // actually keeps a row bold across visits.
+        markSeen();
+      });
+    }, [fetchActivity, markSeen]),
+  );
+
+  // Debounced re-search as the user types — skips the very first run since
+  // the focus effect above already covers the initial load.
+  const skipInitialSearch = useRef(true);
+  useEffect(() => {
+    if (skipInitialSearch.current) {
+      skipInitialSearch.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetchActivity(filterQuery);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [filterQuery, fetchActivity]);
 
   useEffect(() => {
     api
@@ -241,6 +278,9 @@ export default function ActivityScreen() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [events]);
 
+  // Text search already happened server-side (see fetchActivity) — events
+  // here is already scoped to filterQuery, so only the remaining filters
+  // need a client-side pass.
   const filteredEvents = useMemo(() => {
     const cutoff = periodCutoff(filterPeriod);
     return events.filter((e) => {
@@ -254,6 +294,7 @@ export default function ActivityScreen() {
   }, [events, filterType, filterPeriod, filterGroupId, filterCategory, filterUserId]);
 
   const activeFilterCount = [
+    filterQuery.trim() !== '',
     filterType !== 'all',
     filterPeriod !== 'all',
     filterGroupId != null,
@@ -262,6 +303,7 @@ export default function ActivityScreen() {
   ].filter(Boolean).length;
 
   const clearFilters = () => {
+    setFilterQuery('');
     setFilterType('all');
     setFilterPeriod('all');
     setFilterGroupId(null);
@@ -385,6 +427,14 @@ export default function ActivityScreen() {
         clearLabel={t('activity.clearFilters')}
         onClear={clearFilters}
         doneLabel={t('common.done')}>
+        <FilterSection label={t('activity.filterSearch')}>
+          <FilterSearchInput
+            value={filterQuery}
+            onChange={setFilterQuery}
+            placeholder={t('activity.searchPlaceholder')}
+          />
+        </FilterSection>
+
         <FilterSection label={t('activity.filterType')}>
           <FilterSegment
             value={filterType}

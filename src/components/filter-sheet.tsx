@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { FilterIcon } from '@/components/filter-icon';
 import { Font, Radius, type ThemeColors } from '@/constants/design';
@@ -110,6 +110,30 @@ export function FilterSegment<T extends string>({
   );
 }
 
+export function FilterSearchInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  const Palette = useColors();
+  const styles = makeStyles(Palette);
+  return (
+    <TextInput
+      value={value}
+      onChangeText={onChange}
+      placeholder={placeholder}
+      placeholderTextColor={Palette.muted}
+      autoCapitalize="none"
+      autoCorrect={false}
+      style={styles.searchInput}
+    />
+  );
+}
+
 export type FilterChipOption = { key: string; label: string; emoji?: string; active: boolean; onPress: () => void };
 
 export function FilterChipRow({ options }: { options: FilterChipOption[] }) {
@@ -192,6 +216,17 @@ const makeStyles = (Palette: ThemeColors) =>
       color: Palette.muted,
       marginBottom: 8,
       marginTop: 14,
+    },
+    searchInput: {
+      height: 44,
+      backgroundColor: Palette.card,
+      borderWidth: 1,
+      borderColor: Palette.cardBorder,
+      borderRadius: Radius.md,
+      paddingHorizontal: 14,
+      fontSize: 14.5,
+      fontFamily: Font.sans,
+      color: Palette.ink,
     },
     segment: { flexDirection: 'row', gap: 8 },
     segmentBtn: {
