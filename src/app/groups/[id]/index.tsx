@@ -17,6 +17,7 @@ import { Icon } from '@/components/icon';
 import {
   FilterBadgeButton,
   FilterChipRow,
+  FilterSearchInput,
   FilterSection,
   FilterSegment,
   FilterSheet,
@@ -148,6 +149,7 @@ export default function GroupDetailScreen() {
   const [editingName, setEditingName] = useState(false);
   const [savingGroup, setSavingGroup] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterQuery, setFilterQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'settlement'>('all');
   const [filterPeriod, setFilterPeriod] = useState<PeriodFilter>('all');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
@@ -274,9 +276,20 @@ export default function GroupDetailScreen() {
     return [...map.entries()].map(([uid, name]) => ({ id: uid, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [expenses, settlements, pending, group, memberName]);
 
+  // The bold title text each row actually shows — same string a search
+  // should match against, kind for kind.
+  const itemTitle = (item: HistoryItem): string =>
+    item.kind === 'pending'
+      ? item.pending.payload.description
+      : item.kind === 'payment'
+        ? t('groupDetail.paymentTitle')
+        : item.expense.description;
+
   const filteredHistory = useMemo(() => {
     const cutoff = periodCutoff(filterPeriod);
+    const query = filterQuery.trim().toLowerCase();
     return history.filter((item) => {
+      if (query && !itemTitle(item).toLowerCase().includes(query)) return false;
       if (cutoff && new Date(item.date) < cutoff) return false;
       if (item.kind === 'pending') {
         if (filterType === 'settlement') return false;
@@ -295,9 +308,10 @@ export default function GroupDetailScreen() {
       if (filterUserId != null && item.expense.paid_by.id !== filterUserId) return false;
       return true;
     });
-  }, [history, filterType, filterPeriod, filterCategory, filterUserId]);
+  }, [history, filterQuery, filterType, filterPeriod, filterCategory, filterUserId]);
 
   const activeFilterCount = [
+    filterQuery.trim() !== '',
     filterType !== 'all',
     filterPeriod !== 'all',
     filterCategory != null,
@@ -305,6 +319,7 @@ export default function GroupDetailScreen() {
   ].filter(Boolean).length;
 
   const clearFilters = () => {
+    setFilterQuery('');
     setFilterType('all');
     setFilterPeriod('all');
     setFilterCategory(null);
@@ -898,6 +913,14 @@ export default function GroupDetailScreen() {
         clearLabel={t('activity.clearFilters')}
         onClear={clearFilters}
         doneLabel={t('common.done')}>
+        <FilterSection label={t('activity.filterSearch')}>
+          <FilterSearchInput
+            value={filterQuery}
+            onChange={setFilterQuery}
+            placeholder={t('activity.searchPlaceholder')}
+          />
+        </FilterSection>
+
         <FilterSection label={t('activity.filterType')}>
           <FilterSegment
             value={filterType}
