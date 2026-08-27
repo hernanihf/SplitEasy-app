@@ -11,6 +11,7 @@ import { BackButton } from '@/components/back-button';
 import { BottomNav } from '@/components/bottom-nav';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CategoryChart } from '@/components/category-chart';
+import { DateField } from '@/components/date-field';
 import { EditGroupIconModal } from '@/components/edit-group-icon-modal';
 import { EditGroupNameModal } from '@/components/edit-group-name-modal';
 import { Icon } from '@/components/icon';
@@ -91,6 +92,14 @@ type HistoryItem =
 
 type GroupSnapshot = { group: Group; expenses: Expense[]; settlements: Settlement[]; debts: Debt[] };
 
+// The Stats tab's own date filter — genuinely calendar-based (a specific
+// month, or an arbitrary from/to range), unlike History's relative "last N
+// days" PeriodFilter, which doesn't fit an "analyze March" kind of question.
+type StatsFilter =
+  | { mode: 'all' }
+  | { mode: 'month'; year: number; month: number } // month: 0-11
+  | { mode: 'range'; from: Date | null; to: Date | null };
+
 function ordinalSuffix(day: number): string {
   if (day >= 11 && day <= 13) return 'th';
   switch (day % 10) {
@@ -116,6 +125,29 @@ function longDate(iso: string): string {
   }
   const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(d);
   return `${d.getDate()}${ordinalSuffix(d.getDate())} ${month}`;
+}
+
+// "Ago 2026" / "Aug 2026" — short enough for a filter chip.
+function monthLabel(year: number, month: number): string {
+  const d = new Date(year, month, 1);
+  return new Intl.DateTimeFormat(i18n.locale === 'es' ? 'es-AR' : 'en-US', {
+    month: 'short',
+    year: 'numeric',
+  }).format(d);
+}
+
+function csvEscape(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function statsFilterFileTag(filter: StatsFilter): string {
+  if (filter.mode === 'month') return `${filter.year}-${String(filter.month + 1).padStart(2, '0')}`;
+  if (filter.mode === 'range') {
+    const from = filter.from ? filter.from.toISOString().slice(0, 10) : 'start';
+    const to = filter.to ? filter.to.toISOString().slice(0, 10) : 'end';
+    return `${from}_to_${to}`;
+  }
+  return 'all';
 }
 
 export default function GroupDetailScreen() {
@@ -154,6 +186,8 @@ export default function GroupDetailScreen() {
   const [filterPeriod, setFilterPeriod] = useState<PeriodFilter>('all');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterUserId, setFilterUserId] = useState<number | null>(null);
+  const [statsFilter, setStatsFilter] = useState<StatsFilter>({ mode: 'all' });
+  const [exportingSpendingCsv, setExportingSpendingCsv] = useState(false);
   // Lets the sync-then-reload step below call the latest `load` without
   // referencing the `load` const from inside its own definition.
   const loadRef = useRef<() => void>(() => {});
@@ -326,12 +360,46 @@ export default function GroupDetailScreen() {
     setFilterUserId(null);
   };
 
-  // Total group spend per category (settlements aren't spending, so they're
-  // excluded), largest first — powers the spending chart.
-  const categoryBreakdown = useMemo(() => {
-    const totals = new Map<string, number>();
+  // Every calendar month with at least one (non-deleted) expense, newest
+  // first — what the Stats tab's "Month" chips offer, so there's never a
+  // chip for a month with nothing to show.
+  const statsMonthOptions = useMemo(() => {
+    const map = new Map<string, { year: number; month: number }>();
     for (const e of expenses) {
       if (e.deleted_at) continue;
+      const d = new Date(e.created_at);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (!map.has(key)) map.set(key, { year: d.getFullYear(), month: d.getMonth() });
+    }
+    return [...map.values()].sort((a, b) => (a.year !== b.year ? b.year - a.year : b.month - a.month));
+  }, [expenses]);
+
+  // Non-deleted expenses within whatever the Stats tab's own date filter
+  // currently selects — the range end is treated as inclusive through the
+  // end of that day, matching how a person picks "through the 31st".
+  const statsFilteredExpenses = useMemo(() => {
+    return expenses.filter((e) => {
+      if (e.deleted_at) return false;
+      if (statsFilter.mode === 'all') return true;
+      const d = new Date(e.created_at);
+      if (statsFilter.mode === 'month') {
+        return d.getFullYear() === statsFilter.year && d.getMonth() === statsFilter.month;
+      }
+      if (statsFilter.from && d < statsFilter.from) return false;
+      if (statsFilter.to) {
+        const endOfTo = new Date(statsFilter.to);
+        endOfTo.setHours(23, 59, 59, 999);
+        if (d > endOfTo) return false;
+      }
+      return true;
+    });
+  }, [expenses, statsFilter]);
+
+  // Total spend per category within the current Stats filter, largest
+  // first — powers both the spending chart and its CSV export.
+  const categoryBreakdown = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const e of statsFilteredExpenses) {
       const slug = e.category || 'other';
       totals.set(slug, (totals.get(slug) ?? 0) + e.amount);
     }
@@ -340,7 +408,7 @@ export default function GroupDetailScreen() {
       .sort((a, b) => b.amount - a.amount);
     const total = slices.reduce((sum, s) => sum + s.amount, 0);
     return { slices, total };
-  }, [expenses]);
+  }, [statsFilteredExpenses]);
 
   const handleShare = useCallback(async () => {
     let url = inviteUrl;
@@ -403,6 +471,60 @@ export default function GroupDetailScreen() {
       setExportingCsv(false);
     }
   }, [api, id, exportingCsv]);
+
+  // Built entirely client-side, unlike handleExportCsv above — the group's
+  // full expense list is already loaded (see `expenses`), so there's no
+  // backend round-trip needed for a filtered slice of data already in hand.
+  // One row per expense, with its category's total/share repeated on every
+  // row of that category (rather than left blank after the first) so the
+  // file sorts and pivots cleanly in a spreadsheet.
+  const handleExportSpendingCsv = useCallback(async () => {
+    if (exportingSpendingCsv || categoryBreakdown.total <= 0 || !group) return;
+    setExportingSpendingCsv(true);
+    try {
+      const rows: string[] = [
+        ['Category', 'Description', 'Date', 'Amount', 'Category total', 'Category %'].map(csvEscape).join(','),
+      ];
+      for (const slice of categoryBreakdown.slices) {
+        const catLabel = t(`categories.${slice.slug}`);
+        const totalStr = (slice.amount / 100).toFixed(2);
+        const pctStr = ((slice.amount / categoryBreakdown.total) * 100).toFixed(1);
+        const catExpenses = statsFilteredExpenses
+          .filter((e) => (e.category || 'other') === slice.slug)
+          .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+        for (const e of catExpenses) {
+          rows.push(
+            [catLabel, e.description, e.created_at.slice(0, 10), (e.amount / 100).toFixed(2), totalStr, pctStr]
+              .map(csvEscape)
+              .join(','),
+          );
+        }
+      }
+      const csv = rows.join('\r\n');
+      const filename = `spending-${group.name}-${statsFilterFileTag(statsFilter)}.csv`.replace(/[^\w.-]+/g, '_');
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } else {
+        const file = new File(Paths.cache, filename);
+        file.create({ overwrite: true });
+        file.write(csv);
+        await Sharing.shareAsync(file.uri, { mimeType: 'text/csv', dialogTitle: filename });
+      }
+    } catch {
+      setErrorMsg(t('groupDetail.exportSpendingError'));
+    } finally {
+      setExportingSpendingCsv(false);
+    }
+  }, [exportingSpendingCsv, categoryBreakdown, statsFilteredExpenses, statsFilter, group]);
 
   const confirmDeleteSettlement = useCallback(async () => {
     if (deletingSettlementId == null || deletingSettlement) return;
@@ -850,11 +972,85 @@ export default function GroupDetailScreen() {
 
           {tab === 'stats' && (
             <View style={styles.statsPanel}>
+              <FilterSegment
+                value={statsFilter.mode}
+                onChange={(mode) => {
+                  if (mode === 'month') {
+                    const first = statsMonthOptions[0];
+                    setStatsFilter(first ? { mode: 'month', year: first.year, month: first.month } : { mode: 'all' });
+                  } else if (mode === 'range') {
+                    setStatsFilter({ mode: 'range', from: null, to: null });
+                  } else {
+                    setStatsFilter({ mode: 'all' });
+                  }
+                }}
+                options={[
+                  { value: 'all', label: t('groupDetail.statsFilterAll') },
+                  { value: 'month', label: t('groupDetail.statsFilterMonth') },
+                  { value: 'range', label: t('groupDetail.statsFilterRange') },
+                ]}
+              />
+
+              {statsFilter.mode === 'month' && statsMonthOptions.length > 0 && (
+                <View style={styles.statsMonthRow}>
+                  <FilterChipRow
+                    options={statsMonthOptions.map(
+                      (m): FilterChipOption => ({
+                        key: `${m.year}-${m.month}`,
+                        label: monthLabel(m.year, m.month),
+                        active: statsFilter.mode === 'month' && statsFilter.year === m.year && statsFilter.month === m.month,
+                        onPress: () => setStatsFilter({ mode: 'month', year: m.year, month: m.month }),
+                      }),
+                    )}
+                  />
+                </View>
+              )}
+
+              {statsFilter.mode === 'range' && (
+                <View style={styles.statsRangeRow}>
+                  <View style={styles.statsRangeField}>
+                    <Text style={styles.statsRangeLabel}>{t('groupDetail.statsFrom')}</Text>
+                    <DateField
+                      value={statsFilter.from}
+                      onChange={(d) => setStatsFilter((prev) => (prev.mode === 'range' ? { ...prev, from: d } : prev))}
+                      placeholder={t('groupDetail.statsFrom')}
+                    />
+                  </View>
+                  <View style={styles.statsRangeField}>
+                    <Text style={styles.statsRangeLabel}>{t('groupDetail.statsTo')}</Text>
+                    <DateField
+                      value={statsFilter.to}
+                      onChange={(d) => setStatsFilter((prev) => (prev.mode === 'range' ? { ...prev, to: d } : prev))}
+                      placeholder={t('groupDetail.statsTo')}
+                    />
+                  </View>
+                </View>
+              )}
+              {statsFilter.mode === 'range' && statsFilter.from && statsFilter.to && statsFilter.from > statsFilter.to && (
+                <Text style={styles.statsRangeError}>{t('groupDetail.statsRangeInvalid')}</Text>
+              )}
+
               <CategoryChart
                 slices={categoryBreakdown.slices}
                 total={categoryBreakdown.total}
                 currency={group.currency}
               />
+
+              {categoryBreakdown.total > 0 && (
+                <Pressable
+                  onPress={handleExportSpendingCsv}
+                  disabled={exportingSpendingCsv}
+                  style={styles.statsExportBtn}>
+                  {exportingSpendingCsv ? (
+                    <ActivityIndicator color={Palette.ink} size="small" />
+                  ) : (
+                    <>
+                      <Icon name="download" size={16} color={Palette.ink} />
+                      <Text style={styles.statsExportBtnText}>{t('groupDetail.exportSpending')}</Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
             </View>
           )}
         </ScrollView>
@@ -1054,6 +1250,25 @@ const makeStyles = (Palette: ThemeColors) =>
   filtersRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingTop: 14 },
   list: { paddingHorizontal: 20, paddingTop: 16, gap: 9 },
   statsPanel: { paddingHorizontal: 24, paddingTop: 20 },
+  statsMonthRow: { marginTop: 12 },
+  statsRangeRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  statsRangeField: { flex: 1 },
+  statsRangeLabel: { fontSize: 12, fontFamily: Font.sansSemibold, color: Palette.muted, marginBottom: 6 },
+  statsRangeError: { fontSize: 12.5, color: Palette.red, marginTop: 8 },
+  statsExportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    alignSelf: 'center',
+    marginTop: 22,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: Radius.pill,
+    borderWidth: 1.5,
+    borderColor: Palette.cardBorder,
+  },
+  statsExportBtnText: { fontSize: 13.5, fontFamily: Font.sansSemibold, color: Palette.ink },
   expenseCard: {
     backgroundColor: Palette.card,
     borderWidth: 1,
