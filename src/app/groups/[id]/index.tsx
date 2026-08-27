@@ -136,18 +136,13 @@ function monthLabel(year: number, month: number): string {
   }).format(d);
 }
 
-function csvEscape(value: string): string {
-  return `"${value.replace(/"/g, '""')}"`;
-}
-
-function statsFilterFileTag(filter: StatsFilter): string {
-  if (filter.mode === 'month') return `${filter.year}-${String(filter.month + 1).padStart(2, '0')}`;
-  if (filter.mode === 'range') {
-    const from = filter.from ? filter.from.toISOString().slice(0, 10) : 'start';
-    const to = filter.to ? filter.to.toISOString().slice(0, 10) : 'end';
-    return `${from}_to_${to}`;
-  }
-  return 'all';
+// Local YYYY-MM-DD — not toISOString(), which converts to UTC first and can
+// shift the date by a day depending on the device's timezone and time of day.
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export default function GroupDetailScreen() {
@@ -187,7 +182,7 @@ export default function GroupDetailScreen() {
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterUserId, setFilterUserId] = useState<number | null>(null);
   const [statsFilter, setStatsFilter] = useState<StatsFilter>({ mode: 'all' });
-  const [exportingSpendingCsv, setExportingSpendingCsv] = useState(false);
+  const [exportingSpending, setExportingSpending] = useState(false);
   // Lets the sync-then-reload step below call the latest `load` without
   // referencing the `load` const from inside its own definition.
   const loadRef = useRef<() => void>(() => {});
@@ -472,39 +467,29 @@ export default function GroupDetailScreen() {
     }
   }, [api, id, exportingCsv]);
 
-  // Built entirely client-side, unlike handleExportCsv above — the group's
-  // full expense list is already loaded (see `expenses`), so there's no
-  // backend round-trip needed for a filtered slice of data already in hand.
-  // One row per expense, with its category's total/share repeated on every
-  // row of that category (rather than left blank after the first) so the
-  // file sorts and pivots cleanly in a spreadsheet.
-  const handleExportSpendingCsv = useCallback(async () => {
-    if (exportingSpendingCsv || categoryBreakdown.total <= 0 || !group) return;
-    setExportingSpendingCsv(true);
-    try {
-      const rows: string[] = [
-        ['Category', 'Description', 'Date', 'Amount', 'Category total', 'Category %'].map(csvEscape).join(','),
-      ];
-      for (const slice of categoryBreakdown.slices) {
-        const catLabel = t(`categories.${slice.slug}`);
-        const totalStr = (slice.amount / 100).toFixed(2);
-        const pctStr = ((slice.amount / categoryBreakdown.total) * 100).toFixed(1);
-        const catExpenses = statsFilteredExpenses
-          .filter((e) => (e.category || 'other') === slice.slug)
-          .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-        for (const e of catExpenses) {
-          rows.push(
-            [catLabel, e.description, e.created_at.slice(0, 10), (e.amount / 100).toFixed(2), totalStr, pctStr]
-              .map(csvEscape)
-              .join(','),
-          );
-        }
-      }
-      const csv = rows.join('\r\n');
-      const filename = `spending-${group.name}-${statsFilterFileTag(statsFilter)}.csv`.replace(/[^\w.-]+/g, '_');
+  // The backend rebuilds the same category breakdown from the same date
+  // filter (see spendingQueryString below) and renders it as a native Excel
+  // pie chart — something no pure-JS spreadsheet library running client-side
+  // can do — plus a Details sheet listing every expense behind it.
+  const spendingQueryString = useMemo(() => {
+    const params = new URLSearchParams();
+    if (statsFilter.mode === 'month') {
+      params.set('year', String(statsFilter.year));
+      params.set('month', String(statsFilter.month + 1));
+    } else if (statsFilter.mode === 'range') {
+      if (statsFilter.from) params.set('from', toISODate(statsFilter.from));
+      if (statsFilter.to) params.set('to', toISODate(statsFilter.to));
+    }
+    const qs = params.toString();
+    return qs ? `?${qs}` : '';
+  }, [statsFilter]);
 
+  const handleExportSpending = useCallback(async () => {
+    if (exportingSpending || categoryBreakdown.total <= 0) return;
+    setExportingSpending(true);
+    try {
+      const { blob, filename } = await api.getBlob(`/api/v1/groups/${id}/spending.xlsx${spendingQueryString}`);
       if (Platform.OS === 'web') {
-        const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -514,17 +499,23 @@ export default function GroupDetailScreen() {
         a.remove();
         URL.revokeObjectURL(url);
       } else {
+        // A .txt-style file.write(await blob.text()) would corrupt this —
+        // xlsx is a zipped binary format, not text. writeBytes needs the raw
+        // bytes instead.
         const file = new File(Paths.cache, filename);
         file.create({ overwrite: true });
-        file.write(csv);
-        await Sharing.shareAsync(file.uri, { mimeType: 'text/csv', dialogTitle: filename });
+        file.write(new Uint8Array(await blob.arrayBuffer()));
+        await Sharing.shareAsync(file.uri, {
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          dialogTitle: filename,
+        });
       }
     } catch {
       setErrorMsg(t('groupDetail.exportSpendingError'));
     } finally {
-      setExportingSpendingCsv(false);
+      setExportingSpending(false);
     }
-  }, [exportingSpendingCsv, categoryBreakdown, statsFilteredExpenses, statsFilter, group]);
+  }, [api, id, exportingSpending, categoryBreakdown.total, spendingQueryString]);
 
   const confirmDeleteSettlement = useCallback(async () => {
     if (deletingSettlementId == null || deletingSettlement) return;
@@ -1038,10 +1029,10 @@ export default function GroupDetailScreen() {
 
               {categoryBreakdown.total > 0 && (
                 <Pressable
-                  onPress={handleExportSpendingCsv}
-                  disabled={exportingSpendingCsv}
+                  onPress={handleExportSpending}
+                  disabled={exportingSpending}
                   style={styles.statsExportBtn}>
-                  {exportingSpendingCsv ? (
+                  {exportingSpending ? (
                     <ActivityIndicator color={Palette.ink} size="small" />
                   ) : (
                     <>
